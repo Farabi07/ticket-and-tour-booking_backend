@@ -1,0 +1,50 @@
+[
+{
+    "model": "account.primarygroup",
+    "pk": 1,
+    "fields": {
+        "name": "Assets",
+        "is_deletable": false,
+        "created_at": "2021-12-13T05:19:44.616Z",
+        "updated_at": "2021-12-13T05:19:44.616Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.primarygroup",
+    "pk": 2,
+    "fields": {
+        "name": "Liabilities",
+        "is_deletable": false,
+        "created_at": "2021-12-13T05:19:44.620Z",
+        "updated_at": "2021-12-13T05:19:44.620Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.primarygroup",
+    "pk": 3,
+    "fields": {
+        "name": "Expenses",
+        "is_deletable": false,
+        "created_at": "2021-12-13T05:19:44.620Z",
+        "updated_at": "2021-12-13T05:19:44.620Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.primarygroup",
+    "pk": 4,
+    "fields": {
+        "name": "Incomes",
+        "is_deletable": false,
+        "created_at": "2021-12-13T05:19:44.621Z",
+        "updated_at": "2021-12-13T05:19:44.621Z",
+        "created_by": null,
+        "updated_by": null
+    }
+}
+]

@@ -1,0 +1,498 @@
+[
+{
+    "model": "account.group",
+    "pk": 1,
+    "fields": {
+        "name": "Current Assets",
+        "head_group": null,
+        "head_primarygroup": 1,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.622Z",
+        "updated_at": "2021-12-13T05:19:44.622Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 2,
+    "fields": {
+        "name": "Fixed Assets",
+        "head_group": null,
+        "head_primarygroup": 1,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.626Z",
+        "updated_at": "2021-12-13T05:19:44.626Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 3,
+    "fields": {
+        "name": "Investments",
+        "head_group": null,
+        "head_primarygroup": 1,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.626Z",
+        "updated_at": "2021-12-13T05:19:44.626Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 4,
+    "fields": {
+        "name": "Misc. Expenses (ASSETS)",
+        "head_group": null,
+        "head_primarygroup": 1,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.627Z",
+        "updated_at": "2021-12-13T05:19:44.627Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 5,
+    "fields": {
+        "name": "Bank Accounts",
+        "head_group": 1,
+        "head_primarygroup": null,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.628Z",
+        "updated_at": "2021-12-13T05:19:44.628Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 6,
+    "fields": {
+        "name": "Cash-in-Hand",
+        "head_group": 1,
+        "head_primarygroup": null,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.628Z",
+        "updated_at": "2021-12-13T05:19:44.628Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 7,
+    "fields": {
+        "name": "Deposits (Asssets)",
+        "head_group": 1,
+        "head_primarygroup": null,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.629Z",
+        "updated_at": "2021-12-13T05:19:44.629Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 8,
+    "fields": {
+        "name": "Loans and Advances (Assets)",
+        "head_group": 1,
+        "head_primarygroup": null,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.629Z",
+        "updated_at": "2021-12-13T05:19:44.629Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 9,
+    "fields": {
+        "name": "Stock-in-Hand",
+        "head_group": 1,
+        "head_primarygroup": null,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.630Z",
+        "updated_at": "2021-12-13T05:19:44.630Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 10,
+    "fields": {
+        "name": "Sundry Debtors",
+        "head_group": 1,
+        "head_primarygroup": null,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.630Z",
+        "updated_at": "2021-12-13T05:19:44.631Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 11,
+    "fields": {
+        "name": "Branch / Divisions",
+        "head_group": null,
+        "head_primarygroup": 2,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.637Z",
+        "updated_at": "2021-12-13T05:19:44.637Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 12,
+    "fields": {
+        "name": "Capital Account",
+        "head_group": null,
+        "head_primarygroup": 2,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.637Z",
+        "updated_at": "2021-12-13T05:19:44.637Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 13,
+    "fields": {
+        "name": "Current Liabilities",
+        "head_group": null,
+        "head_primarygroup": 2,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.638Z",
+        "updated_at": "2021-12-13T05:19:44.638Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 14,
+    "fields": {
+        "name": "Salary",
+        "head_group": null,
+        "head_primarygroup": 2,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.639Z",
+        "updated_at": "2021-12-13T05:19:44.639Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 15,
+    "fields": {
+        "name": "Investment",
+        "head_group": null,
+        "head_primarygroup": 2,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.639Z",
+        "updated_at": "2021-12-13T05:19:44.639Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 16,
+    "fields": {
+        "name": "Loans (Liability)",
+        "head_group": null,
+        "head_primarygroup": 2,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.640Z",
+        "updated_at": "2021-12-13T05:19:44.640Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 17,
+    "fields": {
+        "name": "Suspense A/c",
+        "head_group": null,
+        "head_primarygroup": 2,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.641Z",
+        "updated_at": "2021-12-13T05:19:44.641Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 18,
+    "fields": {
+        "name": "Reserves & Surplus",
+        "head_group": 12,
+        "head_primarygroup": null,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.642Z",
+        "updated_at": "2021-12-13T05:19:44.642Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 19,
+    "fields": {
+        "name": "Duties & Taxes",
+        "head_group": 13,
+        "head_primarygroup": null,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.642Z",
+        "updated_at": "2021-12-13T05:19:44.642Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 20,
+    "fields": {
+        "name": "Provisions",
+        "head_group": 13,
+        "head_primarygroup": null,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.643Z",
+        "updated_at": "2021-12-13T05:19:44.643Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 21,
+    "fields": {
+        "name": "Sundry Creditors",
+        "head_group": 13,
+        "head_primarygroup": null,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.644Z",
+        "updated_at": "2021-12-13T05:19:44.644Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 22,
+    "fields": {
+        "name": "Bank OD A/c",
+        "head_group": 16,
+        "head_primarygroup": null,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.645Z",
+        "updated_at": "2021-12-13T05:19:44.645Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 23,
+    "fields": {
+        "name": "Secured Loans",
+        "head_group": 16,
+        "head_primarygroup": null,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.646Z",
+        "updated_at": "2021-12-13T05:19:44.646Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 24,
+    "fields": {
+        "name": "Unsecured Loans",
+        "head_group": 16,
+        "head_primarygroup": null,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.646Z",
+        "updated_at": "2021-12-13T05:19:44.646Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 25,
+    "fields": {
+        "name": "Direct Expenses",
+        "head_group": null,
+        "head_primarygroup": 3,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.647Z",
+        "updated_at": "2021-12-13T05:19:44.647Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 26,
+    "fields": {
+        "name": "Indirect Expenses",
+        "head_group": null,
+        "head_primarygroup": 3,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.647Z",
+        "updated_at": "2021-12-13T05:19:44.647Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 27,
+    "fields": {
+        "name": "Purchase Accounts",
+        "head_group": null,
+        "head_primarygroup": 3,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.648Z",
+        "updated_at": "2021-12-13T05:19:44.648Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 28,
+    "fields": {
+        "name": "Direct Incomes",
+        "head_group": null,
+        "head_primarygroup": 4,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.649Z",
+        "updated_at": "2021-12-13T05:19:44.649Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 29,
+    "fields": {
+        "name": "Indirect Incomes",
+        "head_group": null,
+        "head_primarygroup": 4,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.650Z",
+        "updated_at": "2021-12-13T05:19:44.650Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 30,
+    "fields": {
+        "name": "Sales Accounts",
+        "head_group": null,
+        "head_primarygroup": 4,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2021-12-13T05:19:44.651Z",
+        "updated_at": "2021-12-13T05:19:44.651Z",
+        "created_by": null,
+        "updated_by": null
+    }
+},
+{
+    "model": "account.group",
+    "pk": 31,
+    "fields": {
+        "name": "Customers",
+        "head_group": 10,
+        "head_primarygroup": null,
+        "is_deletable": false,
+        "is_primary": false,
+        "is_default": false,
+        "created_at": "2022-01-03T09:39:19.054Z",
+        "updated_at": "2022-01-03T09:39:19.054Z",
+        "created_by": 1,
+        "updated_by": null
+    }
+}
+]

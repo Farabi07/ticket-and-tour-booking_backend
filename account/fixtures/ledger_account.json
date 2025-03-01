@@ -1,0 +1,105 @@
+[
+    {
+        "model": "account.ledgeraccount",
+        "pk": 1,
+        "fields": {
+            "name": "Bank",
+            "ledger_type": null,
+            "reference_id": null,
+            "head_group": 5,
+            "head_primarygroup": null,
+            "is_deletable": false,
+            "is_default": false,
+            "created_at": "2021-12-13T05:19:44.631Z",
+            "updated_at": "2021-12-13T05:19:44.631Z",
+            "created_by": null,
+            "updated_by": null
+        }
+    },
+    {
+        "model": "account.ledgeraccount",
+        "pk": 2,
+        "fields": {
+            "name": "Cash",
+            "ledger_type": null,
+            "reference_id": null,
+            "head_group": 6,
+            "head_primarygroup": null,
+            "is_deletable": false,
+            "is_default": false,
+            "created_at": "2021-12-13T05:19:44.636Z",
+            "updated_at": "2021-12-13T05:19:44.636Z",
+            "created_by": null,
+            "updated_by": null
+        }
+    },
+    {
+        "model": "account.ledgeraccount",
+        "pk": 3,
+        "fields": {
+            "name": "Profit & Loss A/C",
+            "ledger_type": null,
+            "reference_id": null,
+            "head_group": null,
+            "head_primarygroup": 2,
+            "is_deletable": false,
+            "is_default": false,
+            "created_at": "2021-12-13T05:19:44.641Z",
+            "updated_at": "2021-12-13T06:24:02.135Z",
+            "created_by": null,
+            "updated_by": 1
+        }
+    },
+    {
+        "model": "account.ledgeraccount",
+        "pk": 4,
+        "fields": {
+            "name": "Company Purchase",
+            "ledger_type": "Company Purchase",
+            "reference_id": null,
+            "head_group": 27,
+            "head_primarygroup": null,
+            "is_deletable": false,
+            "is_default": false,
+            "created_at": "2021-12-13T05:19:44.648Z",
+            "updated_at": "2021-12-13T06:36:34.022Z",
+            "created_by": null,
+            "updated_by": 1
+        }
+    },
+    {
+        "model": "account.ledgeraccount",
+        "pk": 5,
+        "fields": {
+            "name": "Company Sales",
+            "ledger_type": "Company Sales",
+            "reference_id": null,
+            "head_group": 30,
+            "head_primarygroup": null,
+            "is_deletable": false,
+            "is_default": false,
+            "created_at": "2021-12-13T05:19:44.652Z",
+            "updated_at": "2021-12-13T05:19:44.652Z",
+            "created_by": null,
+            "updated_by": null
+        }
+    },
+    {
+        "model": "account.ledgeraccount",
+        "pk": 6,
+        "fields": {
+            "name": "Opening Balance Of Customer",
+            "ledger_type": "Opening Balance Of Customer",
+            "reference_id": null,
+            "head_group": 31,
+            "head_primarygroup": null,
+            "is_deletable": false,
+            "is_default": false,
+            "created_at": "2021-12-13T05:19:44.652Z",
+            "updated_at": "2021-12-13T05:19:44.652Z",
+            "created_by": null,
+            "updated_by": null
+        }
+    }
+    ]
+    

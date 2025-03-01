@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!-- <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head> -->
+  <!-- <body>
+    <h1>Booking Confirmation</h1>
+    <br>
+    <p>Dear {{ passenger.first_name }} {{ passenger.last_name|default:" " }},</p>
+    <p>Thank you for booking with us! We are excited to confirm your reservation for the {{ bus_name }}. We look forward to providing you with an unforgettable experience.</p>
+    <br>
+    <p>Please get the ticket details in the attachment.</p>
+    
+    <p>Thank you for choosing us for your Capri Island adventure.</p>
+
+    <h1>Warm regards,</h1>
+    <strong>Dream Tourism SLRS</strong>
+    <p>Via Principe Eugenio, 95, 00185 Roma RM, Italy.</p>
+    <p>info@dreamtourism.co.uk</p>
+    <p>+3906 4525 9865</p>
+    <p>https://dreamtourism.it</p>
+  </body> -->
+  <main>
+    <body>
+      {{email_body |safe}}
+    </body>
+    
+   
+  </main>
+</html>

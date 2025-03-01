@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Booking Invoice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to the top of the screen */
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            padding: 40px;
+            background: #ffffff;
+            box-sizing: border-box;
+            border: 1px solid #cccccc;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
+        }
+        .cs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #cccccc;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .cs-header img {
+            width: 150px;
+        }
+        .cs-header .cs-invoice-details {
+            text-align: right;
+            font-size: 14px;
+            color: #555555;
+        }
+        .cs-header .cs-invoice-details p {
+            margin: 5px 0;
+        }
+        .cs-box {
+            display: flex;
+            justify-content: space-between;
+            border: 1px solid #cccccc;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .cs-box div {
+            width: 48%;
+        }
+        .cs-box h4 {
+            font-size: 16px;
+            color: #333333;
+            margin-bottom: 10px;
+        }
+        .cs-box p {
+            font-size: 14px;
+            margin: 5px 0;
+            color: #555555;
+        }
+        .cs-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .cs-table th, .cs-table td {
+            border: 1px solid #cccccc;
+            padding: 12px;
+            text-align: left;
+            font-size: 14px;
+            color: #333333;
+        }
+        .cs-table th {
+            background-color: #e6e6e6;
+            font-weight: bold;
+        }
+        .cs-footer {
+            margin-top: 30px;
+            padding: 15px;
+            border: 1px solid #cccccc;
+            background-color: #ffffff; /* Make footer background white */
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: right;
+            color: #333333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="cs-header">
+            <div class="cs-invoice-details">
+                <p><strong>Invoice No:</strong> {{reference_number}}</p>
+                <p style="text-align: left;"><strong>Date:</strong> {{created_at}}</p>
+            </div>
+            <div>
+                <img src="https://imagedelivery.net/dIKhvGtesTiRSxhQ2oKWkA/1df72018-5b53-42df-6d5a-ff79fd0f4a00/public" alt="Logo">
+            </div>
+        </div>
+
+        <!-- Passenger and Bus Info -->
+        <div class="cs-box">
+            <div>
+                <h4>Passenger Info:</h4>
+                <p>{{passenger.first_name}} {{passenger.last_name|default:" " }}</p>
+                <p>{{primary_phone}}</p>
+                <p>{{email}}</p>
+            </div>
+            <div>
+                <h4>{{bus_name}}</h4>
+                <p>Unit-6, 736-740, Romford Road, London, E12 6BT.</p>
+                <p>info@dreamtourism.co.uk</p>
+            </div>
+        </div>
+
+        <!-- Journey and Booking Info -->
+        <div class="cs-box">
+            <div>
+                <p><strong>Journey Date:</strong> {{travel_date}}</p>
+                <p><strong>Booking Date & Time:</strong> {{created_at}}&nbsp;{{booking_time}}</p>
+                {% if pickup_time %}
+                <p><strong>Pick-up Date & Time:</strong> {{travel_date}}&nbsp;{{pickup_time}}</p>
+                {% endif %}
+            </div>
+            <div>
+                <p><strong>Ticket Number:</strong> {{ticket_number}}</p>
+                {% if seat_no_count %}
+                <p><strong>Number of Travelers:</strong> {{seat_no_count}}</p>
+                {% elif number_of_travellers %}
+                <p><strong>Number of Travelers:</strong> {{number_of_travellers}}</p>
+                {% endif %}
+                {% if seat_numbers %}
+                <p><strong>Seat Number:</strong> {{seat_numbers}}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Fare Details Table -->
+        <table class="cs-table">
+            <thead>
+                <tr>
+                    <th>Details</th>
+                    <th>QTN</th>
+                    <th>Base Fare</th>
+                    <th>Taxes & Fee</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{bus_name}} - Business Seat</td>
+                    <td>1</td>
+                    <td>{{total_cost}}</td>
+                    <td>0</td>
+                    <td>{{total_cost}}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Footer -->
+        <div class="cs-footer">
+            <p>Total Amount: {{total_cost}}</p>
+        </div>
+    </div>
+</body>
+</html>
