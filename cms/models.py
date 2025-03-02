@@ -1,5 +1,5 @@
 # from distutils.command.upload import upload
-import imp
+# import imp
 
 from PIL import Image
 from django.db import models

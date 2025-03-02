@@ -1,5 +1,5 @@
 # from distutils.command.upload import upload
-import imp
+# import imp
 from django.db import models
 from django.conf import settings
 from django.core.mail import send_mail

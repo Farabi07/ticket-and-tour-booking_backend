@@ -124,21 +124,11 @@ STRIPE_ENDPOINT_SECRET='whsec_2991f9a5bf0fa25f0c230e10a1e4a7b3358ee861f8fd5ff56d
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'tour_booking_uk_db',
-        'USER': 'postgres',
-        'PASSWORD':'12345',
-        'HOST': 'localhost'
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',  # Saves the database file in your project directory
     }
 }
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'teaching_holy_quran',
-#         'USER': 'postgres',
-#         'PASSWORD': '12345'
-#     }
-# }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators

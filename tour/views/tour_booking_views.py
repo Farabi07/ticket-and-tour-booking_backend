@@ -393,7 +393,6 @@ def calculate_discount(total_price, ref_no):
     
     return discount_amount
 
-
 @api_view(['GET'])
 def getAllBookedTourBooking(request):
     # Fetch all tour bookings without filtering by status
@@ -448,4 +447,3 @@ def getAllBookedTourBooking(request):
     }
 
     return Response(response, status=status.HTTP_200_OK)
-
