@@ -9,7 +9,7 @@ urlpatterns = [
 	path('api/v1/tour_booking/all/', views.getAllTourBooking),
     path('api/v1/tour_booking_list_by_agent/all/<str:agent_ref_no>/', views.tour_booking_list_by_agent),
     
-	# path('api/v1/tour_booking/booked_data/', views.getAllBookedTourBooking),
+	path('api/v1/tour_booking/booked_data/', views.getAllBookedTourBooking),
  
     path('api/v1/tour_booking/all/without_pagination/', views.getAllTourBookingWithoutPagination),
 

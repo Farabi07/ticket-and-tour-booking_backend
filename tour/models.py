@@ -13,11 +13,13 @@ from django.utils.text import slugify
 import re
 from tour.utils import sync_cms_tour_content
 from django.db import transaction
-# from member.models import Member
+from member.models import Member
 # from payments.models import Traveller,Currency
 from django.contrib.postgres.fields import JSONField
 
 class TourContent(models.Model):
+    # booking = models.ForeignKey("TourBooking", on_delete=models.CASCADE, related_name='tour_contents', null=True, blank=True)
+    agent = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='tour_booking_agent', null=True, blank=True)
     name = models.CharField(max_length=1000, unique=False, null=True, blank=True)
     position = models.IntegerField(null=True, blank=True)
     order = models.IntegerField(null=True, blank=True)
@@ -48,6 +50,7 @@ class TourContent(models.Model):
     free_cancellation = models.BooleanField(default=False, null=True, blank=True)
     select_bus = models.CharField(max_length=50, null=True, blank=True)
     is_bokun_url = models.BooleanField(default=True, null=True, blank=True)
+    
     available_dates = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -226,6 +229,11 @@ class TourBooking(models.Model):
     # youth_count = models.IntegerField(default=0, null=True, blank=True)
     # child_count = models.IntegerField(default=0, null=True, blank=True)
     # total_count = models.IntegerField(default=0, null=True, blank=True)
+    total_cost = models.DecimalField(max_digits=10, decimal_places=2,blank=True,null=True)
+    total_discount_amount = models.DecimalField(max_digits=10, decimal_places=2,blank=True,null=True)
+    discount_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    discount_type = models.CharField(max_length=20, choices=(('percentage', 'Percentage'), ('value', 'Value')), default='percentage',blank=True,null=True)
     participants = models.JSONField(null=True, blank=True)
     selected_date = models.DateField(null=True, blank=True)
     selected_time = models.TimeField(null=True, blank=True)
@@ -239,6 +247,8 @@ class TourBooking(models.Model):
         default='pending',
         null=False, blank=False
     )
+    email_pdf = models.FileField(upload_to='tour_booking_pdf/', null=True, blank=True)
+    url = models.CharField(max_length=10000, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="+", null=True, blank=True)
