@@ -8,7 +8,6 @@ from django_currentuser.middleware import get_current_authenticated_user
 from authentication.serializers import AdminUserMinimalListSerializer
 from tour.models import *
 
-
 class TourContentListSerializer(serializers.ModelSerializer):
     created_by = serializers.SerializerMethodField(read_only=True)
     updated_by = serializers.SerializerMethodField(read_only=True)
@@ -137,6 +136,7 @@ class TourBookingListSerializer(serializers.ModelSerializer):
     agent = serializers.SerializerMethodField()
     tour = serializers.SerializerMethodField()
     traveler = serializers.SerializerMethodField()
+    currency = serializers.SerializerMethodField()  # Fix indentation
     created_by = serializers.SerializerMethodField(read_only=True)
     updated_by = serializers.SerializerMethodField(read_only=True)
 
@@ -160,13 +160,18 @@ class TourBookingListSerializer(serializers.ModelSerializer):
 
     def get_traveler(self, obj):
         """Returns traveler name if available."""
-        return obj.traveller.first_name if obj.traveller else None
+        return obj.traveller.first_name if obj.traveller else None  # Fix field name
+
+    def get_currency(self, obj):
+        """Returns currency code if available."""
+        return obj.currency.currency_code if obj.currency else None  
 
     def get_created_by(self, obj):
         return obj.created_by.email if obj.created_by else None
 
     def get_updated_by(self, obj):
         return obj.updated_by.email if obj.updated_by else None
+
 
 
  
@@ -177,8 +182,6 @@ class TourBookingMinimalSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = TourBooking
 		fields = ('id','name', 'value','order')
-
-
 
 
 class TourBookingSerializer(serializers.ModelSerializer):
