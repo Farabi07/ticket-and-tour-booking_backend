@@ -210,7 +210,7 @@ class TourContentImage(models.Model):
 
 
 class TourBooking(models.Model):
-    from payments.models import Traveller, Currency
+    from payments.models import Traveller, Currency,Payment
     PAYMENT_STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('paid', 'Paid'),
@@ -221,6 +221,7 @@ class TourBooking(models.Model):
     agent = models.ForeignKey("member.Member", on_delete=models.CASCADE, related_name='tour_bookings', null=True, blank=True)
     tour = models.ForeignKey(TourContent, on_delete=models.CASCADE, related_name="bookings", null=True, blank=True)
     traveller = models.ForeignKey("payments.Traveller", on_delete=models.CASCADE, related_name="bookings", null=True, blank=True)
+    payment = models.ForeignKey("payments.Payment", on_delete=models.CASCADE, related_name="payment_currency", null=True, blank=True)
     currency = models.ForeignKey("payments.Currency", on_delete=models.CASCADE, related_name="payment_currency", null=True, blank=True)
     adult_price = models.DecimalField(default=0, max_digits=20, decimal_places=2, null=True, blank=True)  
     youth_price = models.DecimalField(default=0, max_digits=20, decimal_places=2, null=True, blank=True)

@@ -7,7 +7,7 @@ from django_currentuser.middleware import get_current_authenticated_user
 
 from authentication.serializers import AdminUserMinimalListSerializer
 from tour.models import *
-
+from payments.serializers import PaymentListSerializer
 class TourContentListSerializer(serializers.ModelSerializer):
     created_by = serializers.SerializerMethodField(read_only=True)
     updated_by = serializers.SerializerMethodField(read_only=True)
@@ -136,7 +136,8 @@ class TourBookingListSerializer(serializers.ModelSerializer):
     agent = serializers.SerializerMethodField()
     tour = serializers.SerializerMethodField()
     traveler = serializers.SerializerMethodField()
-    currency = serializers.SerializerMethodField()  # Fix indentation
+    currency = serializers.SerializerMethodField()
+    payment = PaymentListSerializer()  # Fix instantiation
     created_by = serializers.SerializerMethodField(read_only=True)
     updated_by = serializers.SerializerMethodField(read_only=True)
 
@@ -171,6 +172,7 @@ class TourBookingListSerializer(serializers.ModelSerializer):
 
     def get_updated_by(self, obj):
         return obj.updated_by.email if obj.updated_by else None
+
 
 
 
