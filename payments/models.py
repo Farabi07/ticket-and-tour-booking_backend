@@ -54,6 +54,7 @@ class Payment(models.Model):
         ('cancelled', 'Cancelled'),
     ], default='success')
     tour = models.ForeignKey(TourContent, on_delete=models.SET_NULL, null=True, blank=True) 
+    # tour_booking = models.ForeignKey("tour.TourBooking", on_delete=models.SET_NULL, null=True, blank=True,releted_name="booking_payment") 
     stripe_payment_intent_id = models.CharField(max_length=255, null=True, blank=True) 
     stripe_payment_method_id = models.CharField(max_length=255, null=True, blank=True)
     transaction_reference = models.CharField(max_length=255,null=True, blank=True)

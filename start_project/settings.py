@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'bbms',
     'payments',
     'cms.apps.CmsConfig',
+    'dashboard'
 ]
 
 INSTALLED_APPS += ['sequences.apps.SequencesConfig']
