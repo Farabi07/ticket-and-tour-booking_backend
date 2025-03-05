@@ -310,8 +310,6 @@ def CreateCheckout(request):
         total_youth_price = youth_count * youth_price
         total_child_price = child_count * child_price
         total_price = total_adult_price + total_youth_price + total_child_price
-
-        # Update prices in the TourContent model
         tour.adult_price = adult_price
         tour.youth_price = youth_price
         tour.child_price = child_price
@@ -322,68 +320,82 @@ def CreateCheckout(request):
             agent = Member.objects.filter(ref_no=agent_ref_no).first()
             if not agent:
                 return Response({"error": f"Agent with ref_no '{agent_ref_no}' not found"}, status=404)
-        # Calculate discount based on total price and agent ref_no
-        total_discount_amount = calculate_discount(total_price, agent_ref_no)
-        print("total_discount_amount:", total_discount_amount)
-        total_discount_amount = total_discount_amount.quantize(Decimal('0.01'),)
-        # Update the total discount amount for the agent
-        agent.total_discount_amount = total_discount_amount
-        agent.save()
-        print("agent:", agent.total_discount_amount)
+            total_discount_amount = calculate_discount(total_price, agent_ref_no)
+            print("total_discount_amount:", total_discount_amount)
+            total_discount_amount = total_discount_amount.quantize(Decimal('0.01'),)
+            agent.total_discount_amount = total_discount_amount
+            agent.save()
+            print("agent:", agent.total_discount_amount)
         # Create Booking Before Payment
         selected_date = datetime.strptime(checkout_data.get('selectedDate'), "%Y-%m-%d").date()
         selected_time = datetime.strptime(checkout_data.get('selectedTime'), "%I:%M %p").time()
-        booking_data = {
-            "agent": agent.id if agent else None,
-            "tour": tour.id,
-            "traveller": traveller.id,
-            "adult_count": adult_count,
-            "youth_count": youth_count,
-            "child_count": child_count,
-            "adult_price": total_adult_price,
-            "youth_price": total_youth_price,
-            "child_price": total_child_price,
-            "total_price": total_price,
-            "participants": checkout_data.get('participants', {}),
-            "payWithCash": checkout_data.get('payWithCash'),
-            "payWithStripe": checkout_data.get('payWithStripe'),
-            "selected_date": selected_date,
-            "selected_time": selected_time,
-            "duration": tour.duration,
-            "is_agent": checkout_data.get('is_agent'),
-            "status": "paid",
-            "total_discount_amount":total_discount_amount
-            
-        }
-        print("agent in data",agent)
-        print("tour in data ",tour)
-        booking_data['discount_percent'] = agent.discount_percent
-        booking_data['discount_value'] = agent.discount_value
-        booking_data['discount_type'] = agent.discount_type
-        booking_serializer = TourBookingListSerializer(data=booking_data)
-        if booking_serializer.is_valid():
-            booking = booking_serializer.save()
-            booking.total_discount_amount = total_discount_amount
-            booking.save()
-        else:
-            return Response(booking_serializer.errors, status=400)
-        tour_booking = TourBooking.objects.get(id=booking.id)
         pay_with_cash = checkout_data.get('payWithCash', False)
-        payment_status = "cash paid"
-        print("booking total_discount_amount ",total_discount_amount)
-        # Create a unique payment key
+        # payment_status = "cash paid"
         payment_key = str(uuid.uuid4())
         # Success URL setup
-        localhost = "192.168.68.111"
+        localhost = "http://192.168.68.111:3000"
         success_url = None
+        success_url = f"http://{localhost}:3000/payment-success?payment_id={payment_key}"
+
         if pay_with_cash:
-            success_url = f"http://{localhost}:3000/booking-success?payment_id={payment_key}"
-        elif tour_booking.is_agent:  # If is_agent is True
-            success_url = f"http://{localhost}:3000/payment-success?payment_id={payment_key}"
-        else:  # If is_agent is False
-            success_url = f"http://{localhost}:3000/payment-success?payment_id={payment_key}"
-        print("success_url",success_url)
-        # Stripe Checkout Session Creation
+            booking_data = {
+                "agent": agent.id if agent else None,
+                "tour": tour.id,
+                "traveller": traveller.id,
+                "adult_count": adult_count,
+                "youth_count": youth_count,
+                "child_count": child_count,
+                "adult_price": total_adult_price,
+                "youth_price": total_youth_price,
+                "child_price": total_child_price,
+                "total_price": total_price,
+                "participants": checkout_data.get('participants', {}),
+                "payWithCash": checkout_data.get('payWithCash'),
+                "payWithStripe": checkout_data.get('payWithStripe'),
+                "selected_date": selected_date,
+                "selected_time": selected_time,
+                "duration": tour.duration,
+                "is_agent": checkout_data.get('is_agent'),
+                "status": "paid",
+                "total_discount_amount":total_discount_amount
+                
+            }
+            print("agent in data",agent)
+            print("tour in data ",tour)
+            booking_data['discount_percent'] = agent.discount_percent
+            booking_data['discount_value'] = agent.discount_value
+            booking_data['discount_type'] = agent.discount_type
+            booking_serializer = TourBookingListSerializer(data=booking_data)
+            if booking_serializer.is_valid():
+                booking = booking_serializer.save()
+                booking.total_discount_amount = total_discount_amount
+                booking.save()
+                # Fetch the booking again after saving
+                tour_booking = TourBooking.objects.get(id=booking.id)
+                # Create a unique payment key
+                payment_key = str(uuid.uuid4())
+                # Success URL setup
+                localhost = "192.168.68.111"
+                success_url = None
+                if tour_booking.is_agent:
+                    success_url = f"http://{localhost}:3000/booking-success?payment_id={payment_key}"
+                elif pay_with_cash:
+                    success_url = f"http://{localhost}:3000/payment-success?payment_id={payment_key}"
+                else:  # If is_agent is False
+                    success_url = f"http://{localhost}:3000/payment-success?payment_id={payment_key}"
+
+                print("success_url", success_url)
+
+                # Return response with success URL and booking info
+                return Response({
+                    "message": "Booking successful!",
+                    "booking_id": booking.id,
+                    "success_url": success_url
+                }, status=201)
+
+            else:
+                return Response(booking_serializer.errors, status=400)
+
         if not pay_with_cash:
             line_items = []
             image_urls = [checkout_data.get("tourImage")] if checkout_data.get("tourImage") else []
