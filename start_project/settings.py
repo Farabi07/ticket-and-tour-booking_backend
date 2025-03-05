@@ -117,9 +117,20 @@ AUTHENTICATION_BACKENDS = [
 # STRIPE_SECRET_KEY = "sk_test_51QrXBcCePADtqSXeJt3PkbgNCepKow6NMTSguFfr8ZFzMUgeoCdsAVw6KlhahJ1WhupUougqi34BNfps4Ec0MPgp00iD7d8C8e"
 # STRIPE_ENDPOINT_SECRET = 'whsec_vcFsMk7RnP3uBm9MgUwoS3XUJceyU5et'
 # STRIPE_ENDPOINT_SECRET = 'whsec_2991f9a5bf0fa25f0c230e10a1e4a7b3358ee861f8fd5ff56d274310400b64d2'
-STRIPE_PUBLIC_KEY ='pk_test_51QvcVcH5cscgBQuXnttFXi0clmPxZZqTQXW8GglPJFHSoOw59eSJYhguuPw6vvFsxx7Sti0CLDiLKkOJoeKn7Bi9002MxBwL47'
-STRIPE_SECRET_KEY ='sk_test_51QvcVcH5cscgBQuX8zA1qfjlHdV74WO5QWgS70tEVVmtgtw2SNAtt5kYagv3guYBMbYekplXkzUZLrKYmE2NGqCh00jkshVcUv'
-STRIPE_ENDPOINT_SECRET='whsec_2991f9a5bf0fa25f0c230e10a1e4a7b3358ee861f8fd5ff56d274310400b64d2'
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY')
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
+STRIPE_ENDPOINT_SECRET = os.getenv('STRIPE_ENDPOINT_SECRET')
+
+# Use the appropriate keys based on the environment
+if os.getenv('DJANGO_ENV') == 'production':
+    STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY_PROD')
+    STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY_PROD')
+    STRIPE_ENDPOINT_SECRET = os.getenv('STRIPE_ENDPOINT_SECRET_PROD')
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 

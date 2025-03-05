@@ -86,112 +86,6 @@ def CreatePayment(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# @has_permissions([PermissionEnum.ATTRIBUTE_LIST.name])
-def PaymentSuccess(request):
-    """
-    Handle successful payment and update payment status.
-    """
-    try:
-        payment_id = request.data.get('payment_id')
-
-        # Retrieve payment from database
-        payment = Payment.objects.filter(stripe_payment_id=payment_id).first()
-        if not payment:
-            return Response({"error": "Payment record not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Check status from Stripe
-        intent = stripe.PaymentIntent.retrieve(payment_id)
-        if intent.status == "succeeded":
-            payment.payment_status = "succeeded"
-            payment.save()
-            return Response({"message": "Payment successful", "payment_id": payment.id}, status=status.HTTP_200_OK)
-        else:
-            return Response({"error": "Payment not confirmed as successful"}, status=status.HTTP_400_BAD_REQUEST)
-
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-
-@api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# @has_permissions([PermissionEnum.ATTRIBUTE_LIST.name])
-def PaymentCancel(request):
-    """
-    Handle canceled payment and update payment status.
-    """
-    try:
-        payment_id = request.data.get('payment_id')
-
-        # Retrieve payment from database
-        payment = Payment.objects.filter(stripe_payment_id=payment_id).first()
-        if not payment:
-            return Response({"error": "Payment record not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Check status from Stripe
-        intent = stripe.PaymentIntent.retrieve(payment_id)
-        if intent.status in ["canceled", "requires_payment_method"]:
-            payment.payment_status = "failed"
-            payment.save()
-            return Response({"message": "Payment canceled or failed", "payment_id": payment.id}, status=status.HTTP_200_OK)
-        else:
-            return Response({"error": "Payment still pending"}, status=status.HTTP_400_BAD_REQUEST)
-
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@api_view(['POST'])
-def PaymentFailed(request):
-    """
-    Handle failed payment and update the payment status to 'failed'.
-    """
-    try:
-        payment_id = request.data.get('payment_id')
-
-        if not payment_id:
-            return Response({"error": "Payment intent ID is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Retrieve the payment from the database
-        payment = Payment.objects.filter(stripe_payment_id=payment_id).first()
-        if not payment:
-            return Response({"error": "Payment record not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Check the payment intent status from Stripe
-        intent = stripe.PaymentIntent.retrieve(payment_id)
-        if intent.status in ["requires_payment_method", "canceled"]:
-            payment.payment_status = "failed"
-            payment.save()
-            return Response({"message": "Payment failed", "payment_id": payment.id}, status=status.HTTP_200_OK)
-        else:
-            return Response({"error": "Payment still pending or already succeeded"}, status=status.HTTP_400_BAD_REQUEST)
-
-    except stripe.error.StripeError as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@api_view(['GET'])
-def getPaymentStatus(request, payment_id):
-    """
-    Get the payment status from Stripe by payment intent ID.
-    """
-    try:
-        # Retrieve the payment intent from Stripe
-        intent = stripe.PaymentIntent.retrieve(payment_id)
-        
-        # Return the status of the payment intent
-        return Response({
-            'status': intent.status,
-            'payment_id': intent.id
-        }, status=status.HTTP_200_OK)
-
-    except stripe.error.StripeError as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 stripe.api_key = settings.STRIPE_SECRET_KEY
 endpoint_secret = settings.STRIPE_ENDPOINT_SECRET
 @csrf_exempt
@@ -242,7 +136,7 @@ def stripe_webhook(request):
 
 
 
-
+stripe.api_key = settings.STRIPE_SECRET_KEY
 @api_view(['POST'])
 def CreateCheckout(request):
     try:
