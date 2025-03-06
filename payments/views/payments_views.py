@@ -28,7 +28,7 @@ import uuid
 from dateutil import parser
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from payments.models import Traveller, TourContent, Payment, Currency
+from payments.models import Traveller,Payment, Currency
 from tour.models import TourContent,TourBooking
 from tour.serializers import  TourBookingSerializer
 from django.core.mail import send_mail
@@ -37,10 +37,17 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.mail import EmailMessage
-from django.core.mail import send_mail
+from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 from payments.models import Payment
 from decimal import Decimal,ROUND_DOWN
+from weasyprint import HTML
+import bleach
+from django.core.files.base import ContentFile
+from django.utils.html import strip_tags
+import os
+import segno
+
 @api_view(['POST'])
 def CreatePayment(request):
     if request.method == 'POST':
@@ -137,11 +144,12 @@ def stripe_webhook(request):
 
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
+
 @api_view(['POST'])
 def CreateCheckout(request):
     try:
         checkout_data = request.data
-
+        session = None
         required_keys = ['firstName', 'lastName', 'email', 'phone', 'gender', 'nationality', 'tourID']
         if not all(key in checkout_data for key in required_keys):
             return Response({"error": "Traveller data is incomplete. Ensure all fields are provided."}, status=400)
@@ -181,7 +189,7 @@ def CreateCheckout(request):
             passport_number=checkout_data.get('passportId'),
             date_of_birth=date_of_birth
         )
-
+        print("traveller info:",traveller.first_name)
         # Get tour by ID
         tour_id = checkout_data.get('tourID')
         try:
@@ -204,93 +212,101 @@ def CreateCheckout(request):
         total_youth_price = youth_count * youth_price
         total_child_price = child_count * child_price
         total_price = total_adult_price + total_youth_price + total_child_price
+
+        # Update prices in the TourContent model
         tour.adult_price = adult_price
         tour.youth_price = youth_price
         tour.child_price = child_price
         tour.save()
         agent_ref_no = checkout_data.get('agentRef')
+        payment_status = ""
         agent = None
         if agent_ref_no:
             agent = Member.objects.filter(ref_no=agent_ref_no).first()
             if not agent:
                 return Response({"error": f"Agent with ref_no '{agent_ref_no}' not found"}, status=404)
-            total_discount_amount = calculate_discount(total_price, agent_ref_no)
-            print("total_discount_amount:", total_discount_amount)
-            total_discount_amount = total_discount_amount.quantize(Decimal('0.01'),)
+        # Calculate discount based on total price and agent ref_no
+        total_discount_amount = calculate_discount(total_price, agent_ref_no)
+        # print("total_discount_amount:", total_discount_amount)
+        total_discount_amount = total_discount_amount.quantize(Decimal('0.01'),)
+        # Update the total discount amount for the agent
+        if agent:
             agent.total_discount_amount = total_discount_amount
             agent.save()
-            print("agent:", agent.total_discount_amount)
+        # print("Updated agent total discount amount:", agent.total_discount_amount)
+        # print("agent:", agent.total_discount_amount)
         # Create Booking Before Payment
         selected_date = datetime.strptime(checkout_data.get('selectedDate'), "%Y-%m-%d").date()
         selected_time = datetime.strptime(checkout_data.get('selectedTime'), "%I:%M %p").time()
+        if checkout_data.get('payWithCash'):
+            status = 'paid'
+        elif checkout_data.get('payWithStripe'):
+            status = 'unpaid'
+        else:
+            status = 'pending' 
+        booking_data = {
+            "agent_id": agent.id if agent else None,  # Pass agent ID
+            "tour_id": tour.id,  # Pass tour ID
+            "traveller": traveller.id,
+            "adult_count": adult_count,
+            "youth_count": youth_count,
+            "child_count": child_count,
+            "adult_price": total_adult_price,
+            "youth_price": total_youth_price,
+            "child_price": total_child_price,
+            "total_price": total_price,
+            "participants": checkout_data.get('participants', {}),
+            "payWithCash": checkout_data.get('payWithCash'),
+            "payWithStripe": checkout_data.get('payWithStripe'),
+            "selected_date": selected_date,
+            "selected_time": selected_time,
+            "duration": tour.duration,
+            "is_agent": checkout_data.get('is_agent'),
+            "status": status,           
+        }
+        # Apply discount details only if paying with Cash
+        pay_with_stripe = checkout_data.get('payWithStripe', False)  # Default to False
         pay_with_cash = checkout_data.get('payWithCash', False)
-        # payment_status = "cash paid"
+        if pay_with_cash:
+            booking_data["total_discount_amount"] = total_discount_amount
+            if agent:
+                booking_data["discount_percent"] = agent.discount_percent
+                booking_data["discount_value"] = agent.discount_value
+                booking_data["discount_type"] = agent.discount_type
+            print("Booking Data with Discount (Pay with Cash):", booking_data)
+            print(" farabi agent data ",booking_data["total_discount_amount"])
+        # Create the booking data (without discount details if paying with Stripe)
+        booking_serializer = TourBookingListSerializer(data=booking_data)
+        if booking_serializer.is_valid():
+            print("Debug - Before Saving Booking Data:", booking_data)
+            booking = booking_serializer.save()
+            booking.save()
+            # print("Debug - After Saving - Agent:", booking.agent)
+            # print("Debug - After Saving - Tour:", booking.tour)
+        else:
+            return Response(booking_serializer.errors, status=400)
+        
+
+        # print("booking serialized data ",booking_serializer)
+        tour_booking = TourBooking.objects.get(id=booking.id)
+
+        # print("booking total_discount_amount ",total_discount_amount)
+        # Create a unique payment key
         payment_key = str(uuid.uuid4())
         # Success URL setup
-        localhost = "http://192.168.68.111:3000"
+        localhost = "http://192.168.68.110:3000"
+        base_url = "https://bustours.dreamtourism.co.uk"
         success_url = None
-        success_url = f"http://{localhost}:3000/payment-success?payment_id={payment_key}"
-
-        if pay_with_cash:
-            booking_data = {
-                "agent": agent.id if agent else None,
-                "tour": tour.id,
-                "traveller": traveller.id,
-                "adult_count": adult_count,
-                "youth_count": youth_count,
-                "child_count": child_count,
-                "adult_price": total_adult_price,
-                "youth_price": total_youth_price,
-                "child_price": total_child_price,
-                "total_price": total_price,
-                "participants": checkout_data.get('participants', {}),
-                "payWithCash": checkout_data.get('payWithCash'),
-                "payWithStripe": checkout_data.get('payWithStripe'),
-                "selected_date": selected_date,
-                "selected_time": selected_time,
-                "duration": tour.duration,
-                "is_agent": checkout_data.get('is_agent'),
-                "status": "paid",
-                "total_discount_amount":total_discount_amount
-                
-            }
-            print("agent in data",agent)
-            print("tour in data ",tour)
-            booking_data['discount_percent'] = agent.discount_percent
-            booking_data['discount_value'] = agent.discount_value
-            booking_data['discount_type'] = agent.discount_type
-            booking_serializer = TourBookingListSerializer(data=booking_data)
-            if booking_serializer.is_valid():
-                booking = booking_serializer.save()
-                booking.total_discount_amount = total_discount_amount
-                booking.save()
-                # Fetch the booking again after saving
-                tour_booking = TourBooking.objects.get(id=booking.id)
-                # Create a unique payment key
-                payment_key = str(uuid.uuid4())
-                # Success URL setup
-                localhost = "192.168.68.111"
-                success_url = None
-                if tour_booking.is_agent:
-                    success_url = f"http://{localhost}:3000/booking-success?payment_id={payment_key}"
-                elif pay_with_cash:
-                    success_url = f"http://{localhost}:3000/payment-success?payment_id={payment_key}"
-                else:  # If is_agent is False
-                    success_url = f"http://{localhost}:3000/payment-success?payment_id={payment_key}"
-
-                print("success_url", success_url)
-
-                # Return response with success URL and booking info
-                return Response({
-                    "message": "Booking successful!",
-                    "booking_id": booking.id,
-                    "success_url": success_url
-                }, status=201)
-
-            else:
-                return Response(booking_serializer.errors, status=400)
-
-        if not pay_with_cash:
+        if pay_with_stripe:
+            success_url = f"{localhost}/booking-success?payment_id={payment_key}"
+        elif tour_booking.is_agent:  # If is_agent is True
+            success_url = f"{localhost}/payment-success?payment_id={payment_key}"
+        else:  # If is_agent is False
+            success_url = f"{localhost}/payment-success?payment_id={payment_key}"
+        print("success_url",success_url)
+        # Stripe Checkout Session Creation
+        image_urls = []
+        if  pay_with_stripe:
             line_items = []
             image_urls = [checkout_data.get("tourImage")] if checkout_data.get("tourImage") else []
 
@@ -336,7 +352,7 @@ def CreateCheckout(request):
 
             if not line_items:
                 return Response({"error": "At least one participant with a valid price is required."}, status=400)
-          
+        
             # Create Stripe Checkout session
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
@@ -347,9 +363,15 @@ def CreateCheckout(request):
                 customer_email=traveller.email,
                 # customer = traveller.first_name,
                 billing_address_collection="required",
+                metadata={'booking_id': booking.id}
   
             )
-            # Create Payment Record with session data
+            booking_data = {
+                "status":"success"
+            }
+            
+            payment_status = "succeeded"  # Assuming payment is successful here, you can adjust this based on Stripe's response
+
             payment = Payment.objects.create(
                 traveller=traveller,
                 amount=total_price,
@@ -362,12 +384,18 @@ def CreateCheckout(request):
                 payment_key=payment_key,
                 session_id=session.id,
                 agent_ref_no=checkout_data.get('agentRef'),
-                payWithCash=pay_with_cash,
                 payWithStripe=True
             )
 
             # Update booking with payment reference
-            booking.payment = payment
+            # booking.payment = payment
+            # booking.status = "paid"  # Set the booking status to 'paid' since payment was successful
+            # booking.total_discount_amount = total_discount_amount
+            # booking.save()
+
+            # # Optional: Add Stripe session details to the booking for better tracking
+            booking.stripe_session_id = session.id
+            booking.stripe_payment_intent = session.payment_intent
             booking.save()
 
             # Response with session details
@@ -391,7 +419,7 @@ def CreateCheckout(request):
                 "success_url": success_url,
             }
 
-            print("Response data:", response_data)
+            # print("Response data:", response_data)
             return Response(response_data)
         else:  # If paying with cash, skip Stripe session creation
             # Create Payment record as successful (since cash payment is immediate)
@@ -411,19 +439,77 @@ def CreateCheckout(request):
             # Update booking with payment reference
             booking.payment = payment
             booking.save()
+        context = {
+            "booking_id": booking.id,
+            "tour_name": tour.name,
+            "tour_duration": tour.duration,
+            "tour_images": image_urls,
+            "adult_price": adult_price,
+            "youth_price": youth_price,
+            "child_price": child_price,
+            "total_price": total_price,
+            "total_discount_amount": total_discount_amount,
+            "payment_status": payment_status,
+            "payment_key": payment_key,
+            "payment_method": "cash" if pay_with_cash else "stripe",
+            "payment_reference_number": payment.agent_ref_no if payment else None,
+            "traveller_first_name": traveller.first_name,
+            "traveller_last_name": traveller.last_name,
+            "traveller_email": traveller.email,
+            "traveller_phone": traveller.phone,
+            "currency": currency,
+            "success_url": success_url,
+            "session_details": session if not pay_with_cash else None,
+            "payment_id": payment.id if payment else None,
+            "agent_ref_no": checkout_data.get('agentRef'),
+            "pay_with_cash": pay_with_cash,
+            "pay_with_stripe": not pay_with_cash,
+            "booking_date": tour_booking.created_at, 
+            "travel_date": tour_booking.selected_date,
+            "travel_time": tour_booking.selected_time
+        }
+    # Generate PDFs
+            # pdf_html = render_to_string('payments/pdf_template.html',context)
+            # print("farabi booking data",booking_data)
+            # pdf_file = HTML(string=pdf_html).write_pdf()
+            # pdf_filename = f"{tour.name}_Booking_Confirmation.pdf"
+            # booking.email_pdf.save(pdf_filename, ContentFile(pdf_file), save=True)
+            # payment.email_pdf.save(pdf_filename, ContentFile(pdf_file), save=True)
 
-            response_data = {
-                "payment_id": payment.id,
-                "payment_key": payment.payment_key,
-                "booking_id": booking.id,
-                "payment_status": "successful",
-                "total_price": total_price,
-                "agent_ref_no": agent_ref_no,
-                "tour_name": tour.name,
-                "booking_details": booking_serializer.data,
-                "success_url": success_url,
-            }
-            return Response(response_data)
+        invoice_html = render_to_string('payments/tour-booking-invoice.html',context)
+        invoice_file = HTML(string=invoice_html).write_pdf()
+        pdf_invoice = f"{tour.name}_Booking_Invoice.pdf"
+        booking.booking_invoice.save(pdf_invoice, ContentFile(invoice_file), save=True)
+        payment.booking_invoice.save(pdf_invoice, ContentFile(invoice_file), save=True)
+
+        # Send Email
+        email_html = render_to_string('payments/email_template.html', {"booking": booking})
+        email_cleaned_html = bleach.clean(email_html, tags=[], strip=True)
+        email_text = strip_tags(email_cleaned_html)
+
+        email = EmailMessage(
+            subject=f"{tour.name} - Booking Confirmation",
+            body=email_text,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[traveller.email],
+            bcc = ["farabicse07@gmail.com"]
+        )
+        
+        email.attach('Booking_Invoice.pdf', invoice_file, 'application/pdf')
+
+            # email.send()
+        response_data = {
+            "payment_id": payment.id,
+            "payment_key": payment.payment_key,
+            "booking_id": booking.id,
+            "payment_status": "successful",
+            "total_price": total_price,
+            "agent_ref_no": agent_ref_no,
+            "tour_name": tour.name,
+            "booking_details": booking_serializer.data,
+            "success_url": success_url,
+        }
+        return Response(response_data)
 
     except TourContent.DoesNotExist:
         return Response({"error": "Tour not found"}, status=404)
@@ -431,6 +517,7 @@ def CreateCheckout(request):
         return Response({"error": str(e)}, status=500)
     except Exception as e:
         return Response({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
+
     
 def calculate_discount(total_price, ref_no):
     """Calculate discount based on ref_no from the Member model."""
