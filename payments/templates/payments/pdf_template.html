@@ -1,0 +1,347 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Booking Confirmation</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      body {
+        position: relative;
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        font-family: Arial, sans-serif;
+      }
+      #page {
+        margin: 0 auto;
+        width: 794px;
+        height: 1103px;
+        position: relative;
+        page-break-after: always;
+      }
+      .container {
+        max-width: 794px;
+        padding: 20px;
+        flex: 1;
+      }
+      h2 {
+        font-size: 24px;
+        line-height: 1.4;
+        font-weight: normal;
+      }
+      h3 {
+        font-size: 16px;
+        margin-bottom: 10px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      table,
+      th,
+      td {
+        border: 1px solid #ddd;
+      }
+      th,
+      td {
+        padding: 10px;
+        text-align: left;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      img {
+        max-width: 100%;
+        height: auto;
+      }
+      .footer {
+        text-align: center;
+        height: 80px;
+        bottom: 0;
+        position: absolute;
+  
+        width: 100%;
+      }
+      .footer img {
+        width: 100%;
+        height: 100%;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+      @media (max-width: 767px) {
+        h2,
+        h3 {
+          font-size: 18px;
+        }
+        table {
+          font-size: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body
+    style="
+      color: #000000;
+      background-image: url('https://imagedelivery.net/dIKhvGtesTiRSxhQ2oKWkA/c485fa26-ad7f-4bb9-d59f-b86c99bc7900/public');
+      background-size: cover;
+      background-position: center;
+    "
+  >
+    <div id="page">
+      <header class="text-25 fw-600" style="height: 80px; margin-bottom: 10px">
+        <img
+          src="https://imagedelivery.net/dIKhvGtesTiRSxhQ2oKWkA/268318de-d485-41cb-3690-8a63fd489600/public"
+          alt=""
+          width="100%"
+          height="100%"
+        />
+      </header>
+      <main class="container" style="margin-left: auto; margin-right: auto">
+        <div>
+          <p style="margin: 0">
+            <span><strong>Booking Number-</strong></span>
+            {{invoice_no}}
+          </p>
+          <p style="margin-bottom: 15px">
+            <strong>Booking Date:</strong>
+            {{created_at}}
+          </p>
+          <table
+            style="
+              width: 100.171%;
+              height: 506px;
+              border: 1px solid rgb(177, 177, 177);
+              border-collapse: collapse;
+              color: #000000;
+            "
+          >
+            <tbody>
+              <tr style="height: 215.5px">
+                <td
+                  style="
+                    width: 100.034%;
+                    height: 215.5px;
+                    padding-left: 15px;
+                    border-bottom: 1px solid rgb(177, 177, 177);
+                    border-collapse: collapse;
+                  "
+                  colspan="2"
+                >
+                  <!-- <p style="margin: 0">
+                    <strong>Tour Package:</strong
+                    ><span style="font-weight: 400"> {{bus_name}}</span>
+                  </p> -->
+                  <p style="margin: 0">
+                    <strong
+                      >Tour Package:&nbsp;{{tour_name}}
+                      &nbsp;&nbsp;</strong>
+                  </p>
+                  <br />
+                  <p style="margin: 0">
+                    <strong>ROME-NEPOLI-CAPRI-ROME</strong>
+                  </p>
+                  <p style="margin: 0">
+                    <strong
+                      >Passenger Name:&nbsp;&nbsp;{{traveller_first_name}}
+                      {{traveller_last_name|default:" " }}</strong
+                    >
+                  </p>
+                  <p style="margin: 0">
+                    <strong
+                      >Departure Date:&nbsp; &nbsp; {{travel_date}}
+                      &nbsp;&nbsp;</strong
+                    >
+                  </p>
+                </td>
+              </tr>
+              <tr style="height: 264.667px">
+                <td
+                  style="
+                    width: 74.7728%;
+                    height: 264.667px;
+                    padding-left: 15px;
+                    border-right: 1px solid rgb(177, 177, 177);
+                    border-collapse: collapse;
+                  "
+                >
+                  <p style="margin: 0">
+                    <strong>Date and Time of Departure:</strong
+                    ><span style="font-weight: 400"></span>
+                      &nbsp;&nbsp;{{travel_date}} &nbsp;&nbsp; {{tour_time}}</span
+                    >
+                    <!-- {% if seat_no_count %}
+                    <p style="margin: 0">
+                      <strong>Number of Travelers:</strong>
+                      <span style="font-weight: 400"> {{ seat_no_count }}</span>
+                    </p>
+                    {% else %}
+                    {% if number_of_travellers %} -->
+                    <!-- <p style="margin: 0">
+                      <strong>Number of Travelers:</strong>
+                      <span style="font-weight: 400"> {{ number_of_travellers }}</span>
+                    </p>
+                    {% endif %}
+                    {% endif %}
+                     {% if seat_numbers %}
+                  <p style="margin: 0">
+                    <strong>Seat Number: </strong
+                    ><span style="font-weight: 400">{{seat_numbers}}</span>
+                  </p>
+                  {% endif %}
+
+                  <br />
+                  <div style="
+                  display: flex;
+                  justify-content: flex-start;
+                  margin-top: 30px;
+
+              ">
+                  <div style="
+                  border: 1px solid rgb(114, 114, 114);
+                  padding: 10px;
+                  border-radius: 10px;
+              "> 
+                  {% if adult_seat_count %}
+                  <p style="margin: 0; font-size:12px;">
+                    <strong
+                      >Adults (18Y-65Y):
+                      {{adult_seat_count}} x {{adult_seat_price}}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong
+                    >
+                  </p>
+                  {% endif %} {% if youth_seat_count %}
+                  <p style="margin: 0; font-size:12px;">
+                    <strong
+                      >Youth(7Y-17Y)&nbsp; &nbsp; :
+                      {{youth_seat_count}} x {{youth_seat_price}}&nbsp;</strong
+                    >
+                  </p>
+                  {% endif %} {% if child_seat_count %}
+                  <p style="margin: 0; font-size:12px;">
+                    <strong
+                      >Children(2Y-6Y) :&nbsp;
+                      {{child_seat_count}} x {{child_seat_price}}</strong
+                    >
+                  </p>
+                  {% endif %} {% if price %}
+                  <p style="margin: 0; font-size:12px;">
+                    <strong
+                      >Per-persion price &nbsp;&nbsp;:&nbsp; {{group_size}} x {{per_person}} </strong
+                    >
+                  </p>
+                  <div style="  padding-top: 10px; ">
+                    {% endif %} -->
+                    <p style="margin: 0; border-top: 1px solid rgb(177, 177, 177);font-size:12px;">
+                      
+                      <strong
+                        >
+                        Total Cost &nbsp;
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;{{total_cost}}</strong
+                      >
+                      <br/>
+                      <strong
+                      >
+                      Paid Amount &nbsp;
+                      &nbsp;&nbsp;&nbsp;:&nbsp;{{paid_amount}}</strong
+                    >
+                    <br/>
+                    <strong
+                    >
+                    Due Amount &nbsp;
+                    &nbsp;&nbsp;&nbsp;:&nbsp;{{due_amount}}</strong
+                  >
+                  </div>
+                
+                  </p>
+                </div>
+                </div>
+                </td>
+                <td style="width: 25.2613%; height: 264.667px">
+                  <p style="text-align: center; margin: 0">
+                    <img
+                      src="http://capribusapi.bluebayit.org{{qrcode}}"
+
+                      alt="QR Code"
+                    />
+                  </p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="margin-top: 10px;"><strong style="color: red;">Important note: </strong><span >
+            Do not transfer funds without a booking reference, as this will
+            cause delays. Early bird offers can only be availed once a booking has been
+            confirmed and a deposit payment has been made. Once your booking has
+            been processed, you will receive a confirmation invoice via email and a
+            visa letter (if required). Visa letters can only be sent out once a booking is
+            confirmed. For bookings received more than four weeks before departure,
+            a non-refundable deposit of 25% (of the tour cost) will be required for
+            coach tours. A non-refundable deposit of 40% (of the tour cost) will be
+            required for all other tour types when booking. For bookings received less
+            than four weeks before the departure of the tour, full payment will be
+            required at the time of the booking.</span></p>
+
+         
+       
+          <!-- <p style="margin-top: 10px; margin-bottom: 0;"><strong>Important Note:</strong> <span style="color: red;">If the number of tourists is less than twenty pax then the tour will be cancelled</span></p> -->
+          
+          <p style="margin-top: 10px; margin-bottom: 0;"><strong>Contact Information:&nbsp;</strong></p>
+
+          <p style="margin: 0">
+            <span style="font-weight: 400"
+              >If you have any questions or need further assistance, please feel
+              free to contact our customer service team:</span
+            >
+          </p>
+          <ul style="margin: 0; padding-left: 15px">
+            <li style="font-weight: 400" aria-level="1">
+              <strong>Email:</strong
+              ><span style="font-weight: 400"> info@dreamtourism.co.uk</span>
+            </li>
+            <li style="font-weight: 400" aria-level="1">
+              <strong>Phone:</strong
+              ><span style="font-weight: 400"> +44 7549 293108</span>
+            </li>
+            <li style="font-weight: 400" aria-level="1">
+              <strong>Emergency Contact:</strong
+              ><span style="font-weight: 400"> +44 7549 293108</span>
+            </li>
+          </ul>
+        </div>
+      </main>
+      <div class="footer" id="page-break">
+        <img
+          src="https://imagedelivery.net/dIKhvGtesTiRSxhQ2oKWkA/7cceb708-30c7-4956-16c9-9ef01aacfe00/public"
+          alt=""
+        />
+      </div>
+    </div>
+    <!-- Page break -->
+    <div class="page-break"></div>
+    <div id="page">
+      <header class="text-25 fw-600" style="height: 80px; margin-bottom: 10px">
+        <img
+          src="https://imagedelivery.net/dIKhvGtesTiRSxhQ2oKWkA/268318de-d485-41cb-3690-8a63fd489600/public"
+          alt=""
+          width="100%"
+          height="100%"
+        />
+      </header>
+      <main class="container" style="margin-left: auto; margin-right: auto">
+        <!-- <div>{{ itinerary |safe }}</div> -->
+      </main>
+      <div class="footer" id="page-break">
+        <img
+          src="https://imagedelivery.net/dIKhvGtesTiRSxhQ2oKWkA/7cceb708-30c7-4956-16c9-9ef01aacfe00/public"
+          alt=""
+        />
+      </div>
+    </div>
+  </body>
+</html>
+

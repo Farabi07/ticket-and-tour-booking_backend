@@ -47,7 +47,6 @@ from django.core.files.base import ContentFile
 from django.utils.html import strip_tags
 import os
 import segno
-
 @api_view(['POST'])
 def CreatePayment(request):
     if request.method == 'POST':
@@ -93,6 +92,112 @@ def CreatePayment(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# @has_permissions([PermissionEnum.ATTRIBUTE_LIST.name])
+def PaymentSuccess(request):
+    """
+    Handle successful payment and update payment status.
+    """
+    try:
+        payment_id = request.data.get('payment_id')
+
+        # Retrieve payment from database
+        payment = Payment.objects.filter(stripe_payment_id=payment_id).first()
+        if not payment:
+            return Response({"error": "Payment record not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check status from Stripe
+        intent = stripe.PaymentIntent.retrieve(payment_id)
+        if intent.status == "succeeded":
+            payment.payment_status = "succeeded"
+            payment.save()
+            return Response({"message": "Payment successful", "payment_id": payment.id}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Payment not confirmed as successful"}, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+@api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# @has_permissions([PermissionEnum.ATTRIBUTE_LIST.name])
+def PaymentCancel(request):
+    """
+    Handle canceled payment and update payment status.
+    """
+    try:
+        payment_id = request.data.get('payment_id')
+
+        # Retrieve payment from database
+        payment = Payment.objects.filter(stripe_payment_id=payment_id).first()
+        if not payment:
+            return Response({"error": "Payment record not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check status from Stripe
+        intent = stripe.PaymentIntent.retrieve(payment_id)
+        if intent.status in ["canceled", "requires_payment_method"]:
+            payment.payment_status = "failed"
+            payment.save()
+            return Response({"message": "Payment canceled or failed", "payment_id": payment.id}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Payment still pending"}, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+def PaymentFailed(request):
+    """
+    Handle failed payment and update the payment status to 'failed'.
+    """
+    try:
+        payment_id = request.data.get('payment_id')
+
+        if not payment_id:
+            return Response({"error": "Payment intent ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Retrieve the payment from the database
+        payment = Payment.objects.filter(stripe_payment_id=payment_id).first()
+        if not payment:
+            return Response({"error": "Payment record not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check the payment intent status from Stripe
+        intent = stripe.PaymentIntent.retrieve(payment_id)
+        if intent.status in ["requires_payment_method", "canceled"]:
+            payment.payment_status = "failed"
+            payment.save()
+            return Response({"message": "Payment failed", "payment_id": payment.id}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Payment still pending or already succeeded"}, status=status.HTTP_400_BAD_REQUEST)
+
+    except stripe.error.StripeError as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def getPaymentStatus(request, payment_id):
+    """
+    Get the payment status from Stripe by payment intent ID.
+    """
+    try:
+        # Retrieve the payment intent from Stripe
+        intent = stripe.PaymentIntent.retrieve(payment_id)
+        
+        # Return the status of the payment intent
+        return Response({
+            'status': intent.status,
+            'payment_id': intent.id
+        }, status=status.HTTP_200_OK)
+
+    except stripe.error.StripeError as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 stripe.api_key = settings.STRIPE_SECRET_KEY
 endpoint_secret = settings.STRIPE_ENDPOINT_SECRET
 @csrf_exempt
@@ -117,7 +222,15 @@ def stripe_webhook(request):
         customer_email = session["customer_details"]["email"]
         tour_id = session["metadata"]["tour_id"]
         print("customer_email",customer_email)
-        tour = TourBooking.objects.get(id=tour_id)
+        
+        # try:
+        #     tour_booking = TourBooking.objects.get(id=booking_id)
+        #     tour_booking.status = 'paid'  # Update the status to 'paid'
+        #     tour_booking.save()
+        #     print(f"Booking {tour_booking.booking_id} status updated to 'paid' after Stripe payment")
+        # except TourBooking.DoesNotExist:
+        #         print(f"Booking with ID {tour_booking.id} not found.")
+
         send_mail(
             subject="Here is your product",
             message=f"Thank you for purchasing {tour_id}",
@@ -127,8 +240,6 @@ def stripe_webhook(request):
         try:
             payment = Payment.objects.get(id=payment_id)
             payment.payment_status = "success"
-            payment.stripe_payment_intent_id = session.get('payment_intent')
-            payment.stripe_payment_method_id = session.get('payment_method')
             payment.save()
 
             # Optionally, generate a unique key for the successful payment
@@ -139,11 +250,10 @@ def stripe_webhook(request):
         except Payment.DoesNotExist:
             return JsonResponse({'error': 'Payment not found'}, status=404)
 
-    return JsonResponse({'status': 'success'}, status=200)
+    else:
+        return JsonResponse({'status': 'success'}, status=200)
 
 
-
-stripe.api_key = settings.STRIPE_SECRET_KEY
 
 @api_view(['POST'])
 def CreateCheckout(request):
@@ -235,6 +345,7 @@ def CreateCheckout(request):
             agent.save()
         # print("Updated agent total discount amount:", agent.total_discount_amount)
         # print("agent:", agent.total_discount_amount)
+        invoice_no = generate_reference_number()
         # Create Booking Before Payment
         selected_date = datetime.strptime(checkout_data.get('selectedDate'), "%Y-%m-%d").date()
         selected_time = datetime.strptime(checkout_data.get('selectedTime'), "%I:%M %p").time()
@@ -262,7 +373,8 @@ def CreateCheckout(request):
             "selected_time": selected_time,
             "duration": tour.duration,
             "is_agent": checkout_data.get('is_agent'),
-            "status": status,           
+            "status": status,
+            "invoice_no": invoice_no,           
         }
         # Apply discount details only if paying with Cash
         pay_with_stripe = checkout_data.get('payWithStripe', False)  # Default to False
@@ -439,6 +551,13 @@ def CreateCheckout(request):
             # Update booking with payment reference
             booking.payment = payment
             booking.save()
+            def generate_qr_code(data, filename):
+                qr = segno.make_qr(data)
+                file_path = os.path.join(settings.MEDIA_ROOT, filename)
+                qr.save(file_path, scale=10)
+                return os.path.join(settings.MEDIA_URL, filename)
+        
+        qr_code_url = generate_qr_code(invoice_no, f"qr{invoice_no}.png")
         context = {
             "booking_id": booking.id,
             "tour_name": tour.name,
@@ -466,7 +585,10 @@ def CreateCheckout(request):
             "pay_with_stripe": not pay_with_cash,
             "booking_date": tour_booking.created_at, 
             "travel_date": tour_booking.selected_date,
-            "travel_time": tour_booking.selected_time
+            "travel_time": tour_booking.selected_time,
+            'qrcode': qr_code_url,
+            "invoice_no": invoice_no,
+
         }
     # Generate PDFs
             # pdf_html = render_to_string('payments/pdf_template.html',context)
@@ -517,7 +639,6 @@ def CreateCheckout(request):
         return Response({"error": str(e)}, status=500)
     except Exception as e:
         return Response({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
-
     
 def calculate_discount(total_price, ref_no):
     """Calculate discount based on ref_no from the Member model."""
@@ -542,7 +663,29 @@ def calculate_discount(total_price, ref_no):
     return discount_amount
 
 
+# Function to generate reference number
+import random
+import string
 
+def generate_reference_number():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
+def generate_ticket_number(tour_type):
+    """
+    Generate a unique ticket number in the format: {TOUR_TYPE}-{RANDOM_NUMBER}{RANDOM_LETTERS}.
+    """
+    random_number = random.randint(100, 999)  # 3-digit random number
+    random_letters = ''.join(random.choices(string.ascii_uppercase, k=3))  # 3 random uppercase letters
+    return f"{tour_type.upper()}-{random_number}{random_letters}"
+
+def generate_unique_ticket_number(tour_type):
+    """
+    Ensure the generated ticket number is unique by checking the database.
+    """
+    while True:
+        ticket_number = generate_ticket_number(tour_type)
+        if not TourBooking.objects.filter(ticket_number=ticket_number).exists():
+            return ticket_number
 
 @api_view(['GET'])
 def getPaymentDetails(request, payment_key):

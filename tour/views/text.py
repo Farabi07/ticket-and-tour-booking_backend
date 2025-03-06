@@ -72,5 +72,3 @@ class Payment(models.Model):
     def __str__(self):
         return f"Payment of {self.amount} {self.currency} (Status: {self.payment_status}) - {self.created_by or 'Unknown User'}"
 
-
-

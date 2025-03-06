@@ -1,4 +1,6 @@
 from rest_framework import serializers
+
+from tour.serializers import TourBookingMinimalSerializer
 from .models import Payment, Currency
 from django_currentuser.middleware import get_current_authenticated_user
 from authentication.serializers import AdminUserMinimalListSerializer
@@ -60,6 +62,7 @@ class PaymentListSerializer(serializers.ModelSerializer):
     tour = serializers.SerializerMethodField()
     currency = serializers.SerializerMethodField()
     currency = CurrencyListSerializer()
+    # tour_booking = TourBookingMinimalSerializer()
 
     class Meta:
         model = Payment

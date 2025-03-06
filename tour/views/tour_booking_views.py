@@ -7,7 +7,7 @@ from decimal import Decimal
 from tour.models import TourBooking, TourContent
 from tour.serializers import TourBookingSerializer, TourContentSerializer,TourContentListSerializer
 from member.models import Member
-from tour.serializers import TourBookingListSerializer
+from tour.serializers import TourBookingListSerializer,TourBookingMinimalSerializer
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import status
 from commons.pagination import Pagination
@@ -224,7 +224,7 @@ def tour_booking_list_by_agent(request, agent_ref_no):
         return Response({"message": "No bookings found for this agent."}, status=status.HTTP_404_NOT_FOUND)
 
     # Serialize the data
-    serializer = TourBookingListSerializer(bookings, many=True)
+    serializer = TourBookingMinimalSerializer(bookings, many=True)
     print("booking_data",serializer.data)
     return Response(serializer.data, status=status.HTTP_200_OK,)
 
@@ -393,52 +393,60 @@ def calculate_discount(total_price, ref_no):
     
     return discount_amount
 
+
+
+
 @api_view(['GET'])
 def getAllBookedTourBooking(request):
-    # Fetch all tour bookings without filtering by status
+    # Apply filters using TourBookingFilter
     tour_booking_queryset = TourBookingFilter(
         request.GET,
         queryset=TourBooking.objects.all()
     ).qs
 
+    # Dictionary to store aggregated results
     aggregated_data = {}
 
     for booking in tour_booking_queryset:
         tour_instance = booking.tour
-        if tour_instance is None:
-            continue  # Skip bookings without a linked tour
+        if not tour_instance:
+            continue
 
         tour_id = tour_instance.id
-        tour_name = tour_instance.name  # Fetch the tour name
+        tour_name = tour_instance.name
 
         member_id = booking.agent.id if booking.agent else None
         member_name = booking.agent.first_name if booking.agent else "No Agent"
 
-        if tour_id not in aggregated_data:
-            aggregated_data[tour_id] = {
+        # **Group by (Tour ID & Discount Percent)**
+        discount_percent = booking.discount_percent or 0
+        group_key = (tour_id, discount_percent)  # Now considering discount percent
+
+        if group_key not in aggregated_data:
+            aggregated_data[group_key] = {
                 'tour_name': tour_name,
                 'total_price': 0,
                 'total_discount_amount': 0,
-                'discount_percent': 0,
+                'discount_percent': discount_percent,
                 'discount_value': 0,
                 'booking_count': 0,
                 'members': [],
             }
 
-        aggregated_data[tour_id]['total_price'] += booking.total_price or 0
-        aggregated_data[tour_id]['total_discount_amount'] += booking.total_discount_amount or 0
-        aggregated_data[tour_id]['discount_percent'] = max(
-            aggregated_data[tour_id]['discount_percent'], booking.discount_percent or 0
-        )
-        aggregated_data[tour_id]['discount_value'] += booking.discount_value or 0
-        aggregated_data[tour_id]['booking_count'] += 1
+        # Update Aggregated Data
+        aggregated_data[group_key]['total_price'] += booking.total_price or 0
+        aggregated_data[group_key]['total_discount_amount'] += booking.total_discount_amount or 0
+        aggregated_data[group_key]['discount_value'] += booking.discount_value or 0
+        aggregated_data[group_key]['booking_count'] += 1
 
-        if member_id not in [member['id'] for member in aggregated_data[tour_id]['members']]:
-            aggregated_data[tour_id]['members'].append({
+        # Add unique members
+        if member_id not in [member['id'] for member in aggregated_data[group_key]['members']]:
+            aggregated_data[group_key]['members'].append({
                 'id': member_id,
                 'name': member_name,
             })
 
+    # Convert dictionary to list
     result = list(aggregated_data.values())
 
     response = {
@@ -447,3 +455,7 @@ def getAllBookedTourBooking(request):
     }
 
     return Response(response, status=status.HTTP_200_OK)
+
+
+
+

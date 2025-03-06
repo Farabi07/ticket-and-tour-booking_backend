@@ -210,19 +210,18 @@ class TourContentImage(models.Model):
 
 
 class TourBooking(models.Model):
-    from payments.models import Traveller, Currency,Payment
+    from payments.models import Traveller, Currency
     PAYMENT_STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('paid', 'Paid'),
         ('failed', 'Failed'),
         ('refunded', 'Refunded'),
+        ('unpaid','Unpaid')
     ]
-
+    invoice_no = models.CharField(max_length=255, null=True, blank=True)
     agent = models.ForeignKey("member.Member", on_delete=models.CASCADE, related_name='tour_bookings', null=True, blank=True)
     tour = models.ForeignKey(TourContent, on_delete=models.CASCADE, related_name="bookings", null=True, blank=True)
     traveller = models.ForeignKey("payments.Traveller", on_delete=models.CASCADE, related_name="bookings", null=True, blank=True)
-    payment = models.ForeignKey("payments.Payment", on_delete=models.CASCADE, related_name="payment_currency", null=True, blank=True)
-    currency = models.ForeignKey("payments.Currency", on_delete=models.CASCADE, related_name="payment_currency", null=True, blank=True)
     adult_price = models.DecimalField(default=0, max_digits=20, decimal_places=2, null=True, blank=True)  
     youth_price = models.DecimalField(default=0, max_digits=20, decimal_places=2, null=True, blank=True)
     child_price = models.DecimalField(default=0, max_digits=20, decimal_places=2, null=True, blank=True)
@@ -242,11 +241,11 @@ class TourBooking(models.Model):
     status = models.CharField(
         max_length=10,
         choices=PAYMENT_STATUS_CHOICES,
-        default='pending',
+        # default='pending',
         null=False, blank=False
     )
     email_pdf = models.FileField(upload_to='tour_booking_pdf/', null=True, blank=True)
-    booking_invoice = models.FileField(upload_to='tour_booking_invoice_pdf/', null=True, blank=True)
+    booking_invoice = models.FileField(upload_to='tour_booking_invoice/', null=True, blank=True)
     url = models.CharField(max_length=10000, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
