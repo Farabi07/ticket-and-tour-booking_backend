@@ -262,6 +262,7 @@ def stripe_webhook(request):
         booking.total_discount_amount = total_discount
         booking.status = "paid"
         booking.save()
+        # Prepare context for response and PDF generation
 
         # Prepare response data
         response_data = {
@@ -385,7 +386,8 @@ def CreateCheckout(request):
         # Select booking date and time
         selected_date = datetime.strptime(checkout_data.get('selectedDate'), "%Y-%m-%d").date()
         selected_time = datetime.strptime(checkout_data.get('selectedTime'), "%I:%M %p").time()
-        
+        pay_with_cash=checkout_data.get('payWithCash')
+        pay_with_stripe=checkout_data.get('payWithStripe')
         # Determine payment status
         if checkout_data.get('payWithCash'):
             status = 'paid'
@@ -431,11 +433,23 @@ def CreateCheckout(request):
             booking = booking_serializer.save()
         else:
             return Response(booking_serializer.errors, status=400)
-
+        tour_booking = TourBooking.objects.get(id=booking.id)
         payment_key = str(uuid.uuid4())
         success_url = None 
-        
+                # Success URL setup
+        localhost = "http://192.168.68.110:3000"
+        base_url = "https://bustours.dreamtourism.co.uk"
+        success_url = None
+        if checkout_data.get('payWithStripe'):
+            success_url = f"{localhost}/booking-success?payment_id={payment_key}"
+        elif tour_booking.is_agent:  # If is_agent is True
+            success_url = f"{localhost}/payment-success?payment_id={payment_key}"
+        else:  # If is_agent is False
+            success_url = f"{localhost}/payment-success?payment_id={payment_key}"
+        print("success_url",success_url)
+
         # Process Stripe payment if chosen
+        image_urls = []
         if checkout_data.get('payWithStripe'):
             line_items = []
             image_urls = [checkout_data.get("tourImage")] if checkout_data.get("tourImage") else []
@@ -496,7 +510,56 @@ def CreateCheckout(request):
             )
             booking.payment = payment
             booking.save()
+            context = {
+                "booking_id": booking.id,
+                "tour_name": tour.name,
+                "tour_duration": tour.duration,
+                "tour_images": image_urls,
+                "adult_price": adult_price,
+                "youth_price": youth_price,
+                "child_price": child_price,
+                "total_price": total_price,
+                "total_discount_amount": total_discount_amount,
+                "payment_status": "succeeded",
+                "payment_key": payment_key,
+                "payment_method": "cash" if checkout_data.get('payWithStripe') else "stripe",
+                "payment_reference_number": payment.agent_ref_no if payment else None,
+                "traveller_first_name": traveller.first_name,
+                "traveller_last_name": traveller.last_name,
+                "traveller_email": traveller.email,
+                "traveller_phone": traveller.phone,
+                "currency": currency,
+                "success_url": success_url,
+                "session_details": session if not pay_with_cash else None,
+                "payment_id": payment.id if payment else None,
+                "agent_ref_no": checkout_data.get('agentRef'),
+                "pay_with_cash": pay_with_cash,
+                "pay_with_stripe": pay_with_stripe,
+                "booking_date": tour_booking.created_at, 
+                "travel_date": tour_booking.selected_date,
+                "travel_time": tour_booking.selected_time
+            }
+            # Generate PDFs
+            invoice_html = render_to_string('payments/tour-booking-invoice.html', context)
+            invoice_file = HTML(string=invoice_html).write_pdf()
+            pdf_invoice = f"{tour.name}_Booking_Invoice.pdf"
+            booking.booking_invoice.save(pdf_invoice, ContentFile(invoice_file), save=True)
+            payment.booking_invoice.save(pdf_invoice, ContentFile(invoice_file), save=True)
 
+            # Send Email
+            email_html = render_to_string('payments/email_template.html', {"booking": booking})
+            email_cleaned_html = bleach.clean(email_html, tags=[], strip=True)
+            email_text = strip_tags(email_cleaned_html)
+
+            email = EmailMessage(
+                subject=f"{tour.name} - Booking Confirmation",
+                body=email_text,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[traveller.email],
+                bcc=["farabicse07@gmail.com"]
+            )
+            email.attach('Booking_Invoice.pdf', invoice_file, 'application/pdf')
+            # email.send()
         response_data = {
             "payment_id": payment.id,
             "payment_key": payment.payment_key,
