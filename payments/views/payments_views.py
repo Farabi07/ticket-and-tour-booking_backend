@@ -224,13 +224,13 @@ def stripe_webhook(request):
     # Handle the event
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']  # This contains the session data from Stripe
-
+        print(session)
         # Extract the booking ID and any relevant metadata
         booking_id = session['metadata'].get('booking_id')
         total_discount = session['metadata'].get('total_discount', 0)
         agent_ref_no = session['metadata'].get('agent_ref_no', None)
         payment_key = session['metadata'].get('payment_key', None)
-        currency = session['metadata'].get('currency')
+        currency_code = session['metadata'].get('currency')
 
         # Ensure booking ID exists and fetch the corresponding booking
         if not booking_id:
@@ -240,7 +240,7 @@ def stripe_webhook(request):
             booking = TourBooking.objects.get(id=booking_id)
         except TourBooking.DoesNotExist:
             return JsonResponse({'error': 'Booking not found'}, status=404)
-
+        currency = Currency.objects.get(currency_code=currency_code)
         # Create the payment object
         payment = Payment.objects.create(
             traveller=booking.traveller,
@@ -263,8 +263,27 @@ def stripe_webhook(request):
         booking.status = "paid"
         booking.save()
 
+        # Prepare response data
+        response_data = {
+            "status": "success",
+            "payment_id": payment.id,
+            "payment_key": payment.payment_key,
+            "booking_id": booking.id,
+            "payment_status": payment.payment_status,
+            "total_price": payment.amount,
+            "agent_ref_no": payment.agent_ref_no,
+            "tour_name": booking.tour.name,
+            "currency": {
+                "currency_code": currency.currency_code,
+                "name": currency.name,
+                "symbol": currency.symbol
+            },
+            "session_id": session['id'],
+            "total_discount": total_discount,
+        }
+        print("stripe response",response_data)
         # Respond with success
-        return JsonResponse({'status': 'success'}, status=200)
+        return JsonResponse(response_data, status=200)
 
     return JsonResponse({'status': 'event received'}, status=200)
 
@@ -304,7 +323,7 @@ def CreateCheckout(request):
             name=currency_name,
             symbol=currency_symbol
         )
-        
+        currency_serialized = CurrencyListSerializer(currency).data
         # Create or get traveller
         traveller, _ = Traveller.objects.get_or_create(
             first_name=checkout_data['firstName'],
@@ -316,7 +335,7 @@ def CreateCheckout(request):
             passport_number=checkout_data.get('passportId'),
             date_of_birth=date_of_birth
         )
-
+        print("traveller info:",traveller.first_name)
         # Get the tour
         tour_id = checkout_data.get('tourID')
         try:
@@ -456,7 +475,7 @@ def CreateCheckout(request):
                     'total_discount': str(total_discount_amount),
                       'agent_ref_no': agent_ref_no,
                       'payment_key':payment_key,
-                      "currency":currency_name
+                      "currency":currency_code
                 }
             )
             return Response({'session_url': session.url, 'booking_id': booking.id,'total_discount': total_discount_amount})
@@ -466,13 +485,14 @@ def CreateCheckout(request):
                 traveller=traveller,
                 amount=total_price,
                 payment_method="cash",
-                payment_status="successful",
+                payment_status="succeeded",
                 tour=tour,
                 currency=currency,
                 payment_key=payment_key,
                 agent_ref_no=checkout_data.get('agentRef'),
                 payWithCash=True,
                 payWithStripe=False,
+                tour_booking=booking,
             )
             booking.payment = payment
             booking.save()
@@ -487,6 +507,7 @@ def CreateCheckout(request):
             "tour_name": tour.name,
             "booking_details": booking_serializer.data,
             "success_url": success_url,
+            
         }
 
         return Response(response_data)
