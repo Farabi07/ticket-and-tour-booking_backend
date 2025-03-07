@@ -40,6 +40,7 @@ class Currency(models.Model):
 
 class Payment(models.Model):
     from tour.models import  TourContent
+    tour_booking = models.ForeignKey("tour.TourBooking", on_delete=models.CASCADE, related_name='book_payments', null=True, blank=True)
     payment_key = models.CharField(max_length=100, unique=True, null=True, blank=True)
     session_id = models.CharField(max_length=255, null=True, blank=True)
     payment_url = models.URLField(null=True, blank=True)
