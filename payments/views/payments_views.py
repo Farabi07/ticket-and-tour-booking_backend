@@ -199,14 +199,10 @@ def getPaymentStatus(request, payment_id):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# stripe.api_key = settings.STRIPE_SECRET_KEY
-# endpoint_secret = settings.STRIPE_ENDPOINT_SECRET
-stripe.api_key = 'sk_test_51QvcVcH5cscgBQuX8zA1qfjlHdV74WO5QWgS70tEVVmtgtw2SNAtt5kYagv3guYBMbYekplXkzUZLrKYmE2NGqCh00jkshVcUv'  # Replace with your Stripe Secret Key directly
-endpoint_secret = 'whsec_2991f9a5bf0fa25f0c230e10a1e4a7b3358ee861f8fd5ff56d274310400b64d2'  # Replace with your Stripe Webhook Secret
-
-
-
-
+stripe.api_key = settings.STRIPE_SECRET_KEY
+endpoint_secret = settings.STRIPE_ENDPOINT_SECRET
+# stripe.api_key = 'sk_test_51QvcVcH5cscgBQuX8zA1qfjlHdV74WO5QWgS70tEVVmtgtw2SNAtt5kYagv3guYBMbYekplXkzUZLrKYmE2NGqCh00jkshVcUv'  # Replace with your Stripe Secret Key directly
+# endpoint_secret = 'whsec_2991f9a5bf0fa25f0c230e10a1e4a7b3358ee861f8fd5ff56d274310400b64d2'  # Replace with your Stripe Webhook Secret
 
 @api_view(['POST'])
 def stripe_webhook(request):
@@ -261,19 +257,28 @@ def stripe_webhook(request):
             "payment_status": "succeeded",
             "traveller_email": booking.traveller.email,
             "traveller_phone": booking.traveller.phone,
+            "traveller_first_name":booking.traveller.first_name,
+            "traveller_last_name":booking.traveller.last_name,
             "currency": currency.currency_code,
             "booking_date": booking.created_at,
             "travel_date": booking.selected_date,  
             "travel_time": booking.selected_time,
             "invoice_no":booking.invoice_no  
         }
+            # Generate PDFs
+        # pdf_html = render_to_string('payments/pdf_template.html',context)
+        # pdf_file = HTML(string=pdf_html).write_pdf()
+        # pdf_filename = f"{booking.tour.name}_Booking_Confirmation.pdf"
+        # booking.email_pdf.save(pdf_filename, ContentFile(pdf_file), save=True)
+        # payment.email_pdf.save(pdf_filename, ContentFile(pdf_file), save=True)
+
         invoice_html = render_to_string('payments/tour-booking-invoice.html', context)
         invoice_file = HTML(string=invoice_html).write_pdf()
         pdf_invoice = f"{booking.tour.name}_Booking_Invoice.pdf"
         booking.booking_invoice_pdf.save(pdf_invoice, ContentFile(invoice_file), save=True)
         payment.booking_invoice.save(pdf_invoice, ContentFile(invoice_file), save=True)
         # Send Email
-        email_html = render_to_string('payments/email_template.html', {"booking": booking})
+        email_html = render_to_string('payments/email_body_template.html', {"booking": booking})
         allowed_tags = ['p', 'br', 'strong', 'em', 'a']
         email_cleaned_html = bleach.clean(email_html, tags=allowed_tags, strip=True)
         email_text = strip_tags(email_cleaned_html)
@@ -285,7 +290,7 @@ def stripe_webhook(request):
             to=[booking.traveller.email],
             bcc=["farabicse07@gmail.com"]
         )
-        email.attach('Booking_Invoice.pdf', invoice_file, 'application/pdf')
+        # email.attach('Booking_Confirmation.pdf', pdf_file, 'application/pdf')
         email.send()
 
         # Response Data
@@ -391,22 +396,29 @@ def CreateCheckout(request):
 
         # Discount calculation
         agent_ref_no = checkout_data.get('agentRef')
+        print("farabi agent ref no", agent_ref_no)
+
         agent = None
+        total_discount_amount = Decimal(0)  # Default discount amount
+
         if agent_ref_no:
             agent = Member.objects.filter(ref_no=agent_ref_no).first()
             if not agent:
                 return Response({"error": f"Agent with ref_no '{agent_ref_no}' not found"}, status=404)
-        
-        # Calculate discount if any
-        total_discount_amount = calculate_discount(total_price, agent_ref_no)
-        total_discount_amount = total_discount_amount.quantize(Decimal('0.01'))
+            
+            # Calculate discount since agent_ref_no is valid
+            total_discount_amount = calculate_discount(total_price, agent_ref_no).quantize(Decimal('0.01'))
+            print("farabi total discount amount", total_discount_amount)
 
-        if agent:
+            # Save discount to the agent
             agent.total_discount_amount = total_discount_amount
             agent.save()
+        else:
+            print("Agent ref no is None, skipping discount calculation.")
         
         # Generate invoice number
         invoice_no = generate_reference_number()
+        reference_no = generate_reference_number()
         
         # Select booking date and time
         selected_date = datetime.strptime(checkout_data.get('selectedDate'), "%Y-%m-%d").date()
@@ -422,7 +434,7 @@ def CreateCheckout(request):
             status = 'pending'
         agent_ref_no = checkout_data.get('agentRef')
         booking_data = {
-            "agent_id": agent.id if agent else None,
+            # "agent_id": agent.id if agent else None,
             "tour_id": tour.id,
             "traveller": traveller.id,
             "adult_count": adult_count,
@@ -441,16 +453,31 @@ def CreateCheckout(request):
             "is_agent": checkout_data.get('is_agent'),
             "status": status,
             "invoice_no": invoice_no,
-            "agent_ref":agent_ref_no
+            "agent_ref": agent_ref_no if agent else None,
         }
+      
         print("farabi booking time ",selected_date)
         # If paying with cash, include discount details
-        if checkout_data.get('payWithCash'):
-            booking_data["total_discount_amount"] = total_discount_amount
         if agent:
             booking_data["discount_percent"] = agent.discount_percent
             booking_data["discount_value"] = agent.discount_value
             booking_data["discount_type"] = agent.discount_type
+            booking_data["agent_id"] = agent.id
+
+            
+            if checkout_data.get('payWithCash'):
+                booking_data["total_discount_amount"] = total_discount_amount
+            else:
+                booking_data["total_discount_amount"] = None  
+        else:
+            
+            booking_data["discount_percent"] = None
+            booking_data["discount_value"] = None
+            booking_data["discount_type"] = None
+            booking_data["total_discount_amount"] = None
+            booking_data["agent_id"] = None
+
+
 
         # Create the booking
         booking_serializer = TourBookingListSerializer(data=booking_data)
@@ -568,12 +595,12 @@ def CreateCheckout(request):
                 "invoice_no":invoice_no 
             }
         # Generate PDFs
-                # pdf_html = render_to_string('payments/pdf_template.html',context)
-                # print("farabi booking data",booking_data)
-                # pdf_file = HTML(string=pdf_html).write_pdf()
-                # pdf_filename = f"{tour.name}_Booking_Confirmation.pdf"
-                # booking.email_pdf.save(pdf_filename, ContentFile(pdf_file), save=True)
-                # payment.email_pdf.save(pdf_filename, ContentFile(pdf_file), save=True)
+            # pdf_html = render_to_string('payments/pdf_template.html',context)
+            # print("farabi booking data",booking_data)
+            # pdf_file = HTML(string=pdf_html).write_pdf()
+            # pdf_filename = f"{tour.name}_Booking_Confirmation.pdf"
+            # booking.email_pdf.save(pdf_filename, ContentFile(pdf_file), save=True)
+            # payment.email_pdf.save(pdf_filename, ContentFile(pdf_file), save=True)
 
             invoice_html = render_to_string('payments/tour-booking-invoice.html',context)
             invoice_file = HTML(string=invoice_html).write_pdf()
@@ -582,7 +609,7 @@ def CreateCheckout(request):
             payment.booking_invoice.save(pdf_invoice, ContentFile(invoice_file), save=True)
 
             # Send Email
-            email_html = render_to_string('payments/email_template.html', {"booking": booking})
+            email_html = render_to_string('payments/email_body_template.html', {"booking": booking})
             email_cleaned_html = bleach.clean(email_html, tags=[], strip=True)
             email_text = strip_tags(email_cleaned_html)
 
@@ -594,9 +621,9 @@ def CreateCheckout(request):
                 bcc = ["farabicse07@gmail.com"]
             )
             
-            email.attach('Booking_Invoice.pdf', invoice_file, 'application/pdf')
+            # email.attach('Booking_Invoice.pdf', invoice_file, 'application/pdf')
 
-                # email.send()
+            email.send()
             response_data = {
                 "payment_id": payment.id,
                 "payment_key": payment.payment_key,
@@ -618,10 +645,16 @@ def CreateCheckout(request):
         return Response({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
 
     
+from decimal import Decimal
+
 def calculate_discount(total_price, ref_no):
     """Calculate discount based on ref_no from the Member model."""
     discount_amount = Decimal(0)
     
+    if ref_no is None:
+        # No discount if ref_no is None
+        return discount_amount
+
     # Find the member by ref_no (which is the agent's reference number)
     member = Member.objects.filter(ref_no=ref_no).first()
     
@@ -631,14 +664,21 @@ def calculate_discount(total_price, ref_no):
         discount_value = member.discount_value
         discount_percent = member.discount_percent
         
-        if discount_type == "percentage":
+        # Ensure that the discount fields have valid values
+        if discount_type == "percentage" and discount_percent is not None:
             # Calculate discount based on percentage
             discount_amount = (total_price * discount_percent) / 100
-        elif discount_type == "value":
+        elif discount_type == "value" and discount_value is not None:
             # Use fixed discount value
             discount_amount = discount_value
+        else:
+            # Invalid discount type or missing values
+            print(f"Invalid discount type or missing value for ref_no {ref_no}.")
+    else:
+        print(f"No member found for ref_no {ref_no}.")
     
     return discount_amount
+
 
 
 # Function to generate reference number
