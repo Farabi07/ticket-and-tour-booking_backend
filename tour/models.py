@@ -245,7 +245,7 @@ class TourBooking(models.Model):
         null=False, blank=False
     )
     email_pdf = models.FileField(upload_to='tour_booking_pdf/', null=True, blank=True)
-    booking_invoice = models.FileField(upload_to='tour_booking_invoice/', null=True, blank=True)
+    booking_invoice_pdf = models.FileField(upload_to='tour_booking_invoice/', null=True, blank=True)
     url = models.CharField(max_length=10000, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)

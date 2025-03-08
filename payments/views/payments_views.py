@@ -1,3 +1,4 @@
+
 from calendar import c
 from email import message
 from re import sub
@@ -203,45 +204,32 @@ def getPaymentStatus(request, payment_id):
 stripe.api_key = 'sk_test_51QvcVcH5cscgBQuX8zA1qfjlHdV74WO5QWgS70tEVVmtgtw2SNAtt5kYagv3guYBMbYekplXkzUZLrKYmE2NGqCh00jkshVcUv'  # Replace with your Stripe Secret Key directly
 endpoint_secret = 'whsec_2991f9a5bf0fa25f0c230e10a1e4a7b3358ee861f8fd5ff56d274310400b64d2'  # Replace with your Stripe Webhook Secret
 
+
+
+
+
 @api_view(['POST'])
 def stripe_webhook(request):
-    """
-    Handle the Stripe webhook events, particularly 'checkout.session.completed'
-    to create payment records and update booking status.
-    """
     payload = request.body
-    sig_header = request.META['HTTP_STRIPE_SIGNATURE']
-    event = None
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', None)
+    event = stripe.Webhook.construct_event(payload, sig_header, settings.STRIPE_ENDPOINT_SECRET)
 
-    try:
-        # Verify the webhook signature to ensure it's from Stripe
-        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
-    except ValueError as e:
-        return JsonResponse({'error': 'Invalid payload'}, status=400)
-    except stripe.error.SignatureVerificationError as e:
-        return JsonResponse({'error': 'Invalid signature'}, status=400)
-
-    # Handle the event
     if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']  # This contains the session data from Stripe
-        print(session)
-        # Extract the booking ID and any relevant metadata
-        booking_id = session['metadata'].get('booking_id')
-        total_discount = session['metadata'].get('total_discount', 0)
-        agent_ref_no = session['metadata'].get('agent_ref_no', None)
-        payment_key = session['metadata'].get('payment_key', None)
-        currency_code = session['metadata'].get('currency')
+        session = event['data']['object']
+        metadata = session.get('metadata', {})
+        booking_id = metadata.get('booking_id')
+        total_discount = float(metadata.get('total_discount', 0))
+        agent_ref_no = metadata.get('agent_ref_no', None)
+        payment_key = metadata.get('payment_key', None)
+        currency_code = metadata.get('currency')
 
-        # Ensure booking ID exists and fetch the corresponding booking
         if not booking_id:
             return JsonResponse({'error': 'Booking ID not found in metadata'}, status=400)
 
-        try:
-            booking = TourBooking.objects.get(id=booking_id)
-        except TourBooking.DoesNotExist:
-            return JsonResponse({'error': 'Booking not found'}, status=404)
+        booking = TourBooking.objects.get(id=booking_id)
         currency = Currency.objects.get(currency_code=currency_code)
-        # Create the payment object
+
+        # Create Payment
         payment = Payment.objects.create(
             traveller=booking.traveller,
             amount=booking.total_price,
@@ -249,22 +237,58 @@ def stripe_webhook(request):
             payment_status="succeeded",
             tour=booking.tour,
             tour_booking=booking,
-            session_id=session['id'],  # Stripe session ID
+            session_id=session['id'],
             payWithCash=False,
             payWithStripe=True,
             agent_ref_no=agent_ref_no,
-            payment_key =payment_key,
-            currency=currency 
+            payment_key=payment_key,
+            currency=currency
         )
 
-        # Update booking status to paid and associate the payment
+        # Update Booking
         booking.payment = payment
         booking.total_discount_amount = total_discount
         booking.status = "paid"
         booking.save()
-        # Prepare context for response and PDF generation
 
-        # Prepare response data
+        # Generate Invoice PDF
+        context = {
+            "booking_id": booking.id,
+            "tour_name": booking.tour.name,
+            "tour_duration": booking.tour.duration,
+            "total_price": booking.total_price,
+            "total_discount_amount": total_discount,
+            "payment_status": "succeeded",
+            "traveller_email": booking.traveller.email,
+            "traveller_phone": booking.traveller.phone,
+            "currency": currency.currency_code,
+            "booking_date": booking.created_at,
+            "travel_date": booking.selected_date,  
+            "travel_time": booking.selected_time,
+            "invoice_no":booking.invoice_no  
+        }
+        invoice_html = render_to_string('payments/tour-booking-invoice.html', context)
+        invoice_file = HTML(string=invoice_html).write_pdf()
+        pdf_invoice = f"{booking.tour.name}_Booking_Invoice.pdf"
+        booking.booking_invoice_pdf.save(pdf_invoice, ContentFile(invoice_file), save=True)
+        payment.booking_invoice.save(pdf_invoice, ContentFile(invoice_file), save=True)
+        # Send Email
+        email_html = render_to_string('payments/email_template.html', {"booking": booking})
+        allowed_tags = ['p', 'br', 'strong', 'em', 'a']
+        email_cleaned_html = bleach.clean(email_html, tags=allowed_tags, strip=True)
+        email_text = strip_tags(email_cleaned_html)
+
+        email = EmailMessage(
+            subject=f"{booking.tour.name} - Booking Confirmation",
+            body=email_text,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[booking.traveller.email],
+            bcc=["farabicse07@gmail.com"]
+        )
+        email.attach('Booking_Invoice.pdf', invoice_file, 'application/pdf')
+        email.send()
+
+        # Response Data
         response_data = {
             "status": "success",
             "payment_id": payment.id,
@@ -282,11 +306,12 @@ def stripe_webhook(request):
             "session_id": session['id'],
             "total_discount": total_discount,
         }
-        print("stripe response",response_data)
-        # Respond with success
         return JsonResponse(response_data, status=200)
 
     return JsonResponse({'status': 'event received'}, status=200)
+
+
+
 
 @api_view(['POST'])
 def CreateCheckout(request):
@@ -418,7 +443,7 @@ def CreateCheckout(request):
             "invoice_no": invoice_no,
             "agent_ref":agent_ref_no
         }
-
+        print("farabi booking time ",selected_date)
         # If paying with cash, include discount details
         if checkout_data.get('payWithCash'):
             booking_data["total_discount_amount"] = total_discount_amount
@@ -492,7 +517,8 @@ def CreateCheckout(request):
                       "currency":currency_code
                 }
             )
-            return Response({'session_url': session.url, 'booking_id': booking.id,'total_discount': total_discount_amount})
+
+            return Response({'session_url': session.url, 'booking_id': booking.id, 'total_discount': total_discount_amount})
 
         else:  # If paying with cash, immediately create payment object
             payment = Payment.objects.create(
@@ -508,6 +534,7 @@ def CreateCheckout(request):
                 payWithStripe=False,
                 tour_booking=booking,
             )
+            # Update booking with payment reference
             booking.payment = payment
             booking.save()
             context = {
@@ -515,35 +542,43 @@ def CreateCheckout(request):
                 "tour_name": tour.name,
                 "tour_duration": tour.duration,
                 "tour_images": image_urls,
-                "adult_price": adult_price,
-                "youth_price": youth_price,
-                "child_price": child_price,
-                "total_price": total_price,
-                "total_discount_amount": total_discount_amount,
-                "payment_status": "succeeded",
+                "adult_price": str(adult_price),  # Convert Decimal to string
+                "youth_price": str(youth_price),  # Convert Decimal to string
+                "child_price": str(child_price),  # Convert Decimal to string
+                "total_price": str(total_price),  # Convert Decimal to string
+                "total_discount_amount": str(total_discount_amount),  # Convert Decimal to string
+                "payment_status": "succesfull",
                 "payment_key": payment_key,
-                "payment_method": "cash" if checkout_data.get('payWithStripe') else "stripe",
+                "payment_method": "cash" if pay_with_cash else "stripe",
                 "payment_reference_number": payment.agent_ref_no if payment else None,
                 "traveller_first_name": traveller.first_name,
                 "traveller_last_name": traveller.last_name,
                 "traveller_email": traveller.email,
                 "traveller_phone": traveller.phone,
-                "currency": currency,
+                "currency": currency.currency_code,
                 "success_url": success_url,
                 "session_details": session if not pay_with_cash else None,
                 "payment_id": payment.id if payment else None,
                 "agent_ref_no": checkout_data.get('agentRef'),
                 "pay_with_cash": pay_with_cash,
-                "pay_with_stripe": pay_with_stripe,
-                "booking_date": tour_booking.created_at, 
-                "travel_date": tour_booking.selected_date,
-                "travel_time": tour_booking.selected_time
+                "pay_with_stripe": not pay_with_cash,
+                "booking_date": tour_booking.created_at,
+                "travel_date": tour_booking.selected_date,  
+                "travel_time": tour_booking.selected_time,
+                "invoice_no":invoice_no 
             }
-            # Generate PDFs
-            invoice_html = render_to_string('payments/tour-booking-invoice.html', context)
+        # Generate PDFs
+                # pdf_html = render_to_string('payments/pdf_template.html',context)
+                # print("farabi booking data",booking_data)
+                # pdf_file = HTML(string=pdf_html).write_pdf()
+                # pdf_filename = f"{tour.name}_Booking_Confirmation.pdf"
+                # booking.email_pdf.save(pdf_filename, ContentFile(pdf_file), save=True)
+                # payment.email_pdf.save(pdf_filename, ContentFile(pdf_file), save=True)
+
+            invoice_html = render_to_string('payments/tour-booking-invoice.html',context)
             invoice_file = HTML(string=invoice_html).write_pdf()
             pdf_invoice = f"{tour.name}_Booking_Invoice.pdf"
-            booking.booking_invoice.save(pdf_invoice, ContentFile(invoice_file), save=True)
+            booking.booking_invoice_pdf.save(pdf_invoice, ContentFile(invoice_file), save=True)
             payment.booking_invoice.save(pdf_invoice, ContentFile(invoice_file), save=True)
 
             # Send Email
@@ -556,29 +591,31 @@ def CreateCheckout(request):
                 body=email_text,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 to=[traveller.email],
-                bcc=["farabicse07@gmail.com"]
+                bcc = ["farabicse07@gmail.com"]
             )
-            email.attach('Booking_Invoice.pdf', invoice_file, 'application/pdf')
-            # email.send()
-        response_data = {
-            "payment_id": payment.id,
-            "payment_key": payment.payment_key,
-            "booking_id": booking.id,
-            "payment_status": "successful",
-            "total_price": total_price,
-            "agent_ref_no": agent_ref_no,
-            "tour_name": tour.name,
-            "booking_details": booking_serializer.data,
-            "success_url": success_url,
             
-        }
+            email.attach('Booking_Invoice.pdf', invoice_file, 'application/pdf')
 
-        return Response(response_data)
+                # email.send()
+            response_data = {
+                "payment_id": payment.id,
+                "payment_key": payment.payment_key,
+                "booking_id": booking.id,
+                "payment_status": "successful",
+                "total_price": str(total_price),  # Convert Decimal to string
+                "agent_ref_no": agent_ref_no,
+                "tour_name": tour.name,
+                "booking_details": booking_serializer.data,
+                "success_url": success_url,
+            }
+            return Response(response_data)
 
     except TourContent.DoesNotExist:
         return Response({"error": "Tour not found"}, status=404)
     except stripe.error.StripeError as e:
         return Response({"error": str(e)}, status=500)
+    except Exception as e:
+        return Response({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
 
     
 def calculate_discount(total_price, ref_no):
