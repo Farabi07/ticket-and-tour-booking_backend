@@ -1,4 +1,3 @@
-
 from calendar import c
 from email import message
 from re import sub
@@ -201,8 +200,6 @@ def getPaymentStatus(request, payment_id):
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 endpoint_secret = settings.STRIPE_ENDPOINT_SECRET
-# stripe.api_key = 'sk_test_51QvcVcH5cscgBQuX8zA1qfjlHdV74WO5QWgS70tEVVmtgtw2SNAtt5kYagv3guYBMbYekplXkzUZLrKYmE2NGqCh00jkshVcUv'  # Replace with your Stripe Secret Key directly
-# endpoint_secret = 'whsec_2991f9a5bf0fa25f0c230e10a1e4a7b3358ee861f8fd5ff56d274310400b64d2'  # Replace with your Stripe Webhook Secret
 
 @api_view(['POST'])
 def stripe_webhook(request):
@@ -290,7 +287,7 @@ def stripe_webhook(request):
             to=[booking.traveller.email],
             bcc=["farabicse07@gmail.com"]
         )
-        # email.attach('Booking_Confirmation.pdf', pdf_file, 'application/pdf')
+        email.attach('Booking_Confirmation.pdf', pdf_invoice, 'application/pdf')
         email.send()
 
         # Response Data
@@ -314,7 +311,6 @@ def stripe_webhook(request):
         return JsonResponse(response_data, status=200)
 
     return JsonResponse({'status': 'event received'}, status=200)
-
 
 
 
@@ -366,7 +362,7 @@ def CreateCheckout(request):
             passport_number=checkout_data.get('passportId'),
             date_of_birth=date_of_birth
         )
-        print("traveller info:",traveller.first_name)
+        print("traveller info:", traveller.first_name)
         # Get the tour
         tour_id = checkout_data.get('tourID')
         try:
@@ -388,6 +384,13 @@ def CreateCheckout(request):
         total_child_price = child_count * child_price
         total_price = total_adult_price + total_youth_price + total_child_price
         
+        # Use discounted total price if provided
+        discounted_total_price = checkout_data.get('discountedtotalprice')
+        if discounted_total_price:
+            total_price = Decimal(str(discounted_total_price)).quantize(Decimal('0.01'))
+            print("coupont toal price", total_price)
+            
+        
         # Update the tour's price
         tour.adult_price = adult_price
         tour.youth_price = youth_price
@@ -395,19 +398,27 @@ def CreateCheckout(request):
         tour.save()
 
         # Discount calculation
-        agent_ref_no = checkout_data.get('agentRef')
+        coupon_discount = checkout_data.get('coupon_discount')  # Get coupon_discount from request data
+        agent_ref_no = checkout_data.get('agentRef') if not coupon_discount else None
         print("farabi agent ref no", agent_ref_no)
 
         agent = None
         total_discount_amount = Decimal(0)  # Default discount amount
 
-        if agent_ref_no:
+        if coupon_discount is not None:
+            total_discount_amount = calculate_discount(total_price, coupon_discount=coupon_discount).quantize(Decimal('0.01'))
+            # Find the member by coupon_text
+            print("farabi coupon discount amount", total_discount_amount)
+            member = Member.objects.filter(coupon_text=checkout_data.get('coupon_text')).first()
+            if member:
+                agent = member
+        elif agent_ref_no:
             agent = Member.objects.filter(ref_no=agent_ref_no).first()
             if not agent:
                 return Response({"error": f"Agent with ref_no '{agent_ref_no}' not found"}, status=404)
             
             # Calculate discount since agent_ref_no is valid
-            total_discount_amount = calculate_discount(total_price, agent_ref_no).quantize(Decimal('0.01'))
+            total_discount_amount = calculate_discount(total_price, ref_no=agent_ref_no).quantize(Decimal('0.01'))
             print("farabi total discount amount", total_discount_amount)
 
             # Save discount to the agent
@@ -423,8 +434,9 @@ def CreateCheckout(request):
         # Select booking date and time
         selected_date = datetime.strptime(checkout_data.get('selectedDate'), "%Y-%m-%d").date()
         selected_time = datetime.strptime(checkout_data.get('selectedTime'), "%I:%M %p").time()
-        pay_with_cash=checkout_data.get('payWithCash')
-        pay_with_stripe=checkout_data.get('payWithStripe')
+        pay_with_cash = checkout_data.get('payWithCash')
+        pay_with_stripe = checkout_data.get('payWithStripe')
+        
         # Determine payment status
         if checkout_data.get('payWithCash'):
             status = 'paid'
@@ -432,9 +444,8 @@ def CreateCheckout(request):
             status = 'unpaid'
         else:
             status = 'pending'
-        agent_ref_no = checkout_data.get('agentRef')
+        
         booking_data = {
-            # "agent_id": agent.id if agent else None,
             "tour_id": tour.id,
             "traveller": traveller.id,
             "adult_count": adult_count,
@@ -456,7 +467,8 @@ def CreateCheckout(request):
             "agent_ref": agent_ref_no if agent else None,
         }
       
-        print("farabi booking time ",selected_date)
+        print("farabi booking time ", selected_date)
+        
         # If paying with cash, include discount details
         if agent:
             booking_data["discount_percent"] = agent.discount_percent
@@ -464,20 +476,16 @@ def CreateCheckout(request):
             booking_data["discount_type"] = agent.discount_type
             booking_data["agent_id"] = agent.id
 
-            
             if checkout_data.get('payWithCash'):
                 booking_data["total_discount_amount"] = total_discount_amount
             else:
                 booking_data["total_discount_amount"] = None  
         else:
-            
             booking_data["discount_percent"] = None
             booking_data["discount_value"] = None
             booking_data["discount_type"] = None
             booking_data["total_discount_amount"] = None
-            booking_data["agent_id"] = None
-
-
+            booking_data.pop("agent_id", None)  # Remove agent_id from booking_data if no agent
 
         # Create the booking
         booking_serializer = TourBookingListSerializer(data=booking_data)
@@ -485,20 +493,21 @@ def CreateCheckout(request):
             booking = booking_serializer.save()
         else:
             return Response(booking_serializer.errors, status=400)
+        
         tour_booking = TourBooking.objects.get(id=booking.id)
         payment_key = str(uuid.uuid4())
-        success_url = None 
-                # Success URL setup
+        
+        # Success URL setup
         localhost = "http://192.168.68.110:3000"
         base_url = "https://bustours.dreamtourism.co.uk"
+        uk_url = "https://dreamtourism.co.uk"
         success_url = None
         if checkout_data.get('payWithStripe'):
-            success_url = f"{localhost}/booking-success?payment_id={payment_key}"
+            success_url = f"{base_url}/booking-success?payment_id={payment_key}"
         elif tour_booking.is_agent:  # If is_agent is True
-            success_url = f"{localhost}/payment-success?payment_id={payment_key}"
+            success_url = f"{base_url}/booking-success?payment_id={payment_key}"
         else:  # If is_agent is False
-            success_url = f"{localhost}/payment-success?payment_id={payment_key}"
-        print("success_url",success_url)
+            success_url = f"{uk_url}/payment-success?payment_id={payment_key}"
 
         # Process Stripe payment if chosen
         image_urls = []
@@ -510,7 +519,7 @@ def CreateCheckout(request):
                     "price_data": {
                         "currency": currency_code,
                         "product_data": {"name": tour.name, "images": image_urls},
-                        "unit_amount": 0,
+                        "unit_amount": int(total_price * 100),
                     },
                     "quantity": 1,
                 })
@@ -523,6 +532,25 @@ def CreateCheckout(request):
                     },
                     "quantity": adult_count,
                 })
+            if youth_price > 0 and youth_count > 0:
+                line_items.append({
+                    "price_data": {
+                        "currency": currency_code,
+                        "product_data": {"name": f"Youth - {tour.name}"},
+                        "unit_amount": int(youth_price * 100),
+                    },
+                    "quantity": youth_count,
+                })
+
+            if child_price > 0 and child_count > 0:
+                line_items.append({
+                    "price_data": {
+                        "currency": currency_code,
+                        "product_data": {"name": f"Child - {tour.name}"},
+                        "unit_amount": int(child_price * 100),
+                    },
+                    "quantity": child_count,
+                })
 
             if not line_items:
                 return Response({"error": "At least one participant with a valid price is required."}, status=400)
@@ -532,16 +560,16 @@ def CreateCheckout(request):
                 payment_method_types=["card"],
                 line_items=line_items,
                 mode="payment",
-                success_url=f"http://localhost:3000/payment-success?payment_id={payment_key}",
+                success_url=f"{base_url}/payment-success?payment_id={payment_key}",
                 cancel_url="http://localhost:3000/cancel",
                 customer_email=traveller.email,
                 billing_address_collection="required",
                 metadata={
                     'booking_id': booking.id,
                     'total_discount': str(total_discount_amount),
-                      'agent_ref_no': agent_ref_no,
-                      'payment_key':payment_key,
-                      "currency":currency_code
+                    'agent_ref_no': agent_ref_no,
+                    'payment_key': payment_key,
+                    "currency": currency_code
                 }
             )
 
@@ -574,7 +602,7 @@ def CreateCheckout(request):
                 "child_price": str(child_price),  # Convert Decimal to string
                 "total_price": str(total_price),  # Convert Decimal to string
                 "total_discount_amount": str(total_discount_amount),  # Convert Decimal to string
-                "payment_status": "succesfull",
+                "payment_status": "successful",
                 "payment_key": payment_key,
                 "payment_method": "cash" if pay_with_cash else "stripe",
                 "payment_reference_number": payment.agent_ref_no if payment else None,
@@ -592,17 +620,10 @@ def CreateCheckout(request):
                 "booking_date": tour_booking.created_at,
                 "travel_date": tour_booking.selected_date,  
                 "travel_time": tour_booking.selected_time,
-                "invoice_no":invoice_no 
+                "invoice_no": invoice_no 
             }
-        # Generate PDFs
-            # pdf_html = render_to_string('payments/pdf_template.html',context)
-            # print("farabi booking data",booking_data)
-            # pdf_file = HTML(string=pdf_html).write_pdf()
-            # pdf_filename = f"{tour.name}_Booking_Confirmation.pdf"
-            # booking.email_pdf.save(pdf_filename, ContentFile(pdf_file), save=True)
-            # payment.email_pdf.save(pdf_filename, ContentFile(pdf_file), save=True)
-
-            invoice_html = render_to_string('payments/tour-booking-invoice.html',context)
+            # Generate PDFs
+            invoice_html = render_to_string('payments/tour-booking-invoice.html', context)
             invoice_file = HTML(string=invoice_html).write_pdf()
             pdf_invoice = f"{tour.name}_Booking_Invoice.pdf"
             booking.booking_invoice_pdf.save(pdf_invoice, ContentFile(invoice_file), save=True)
@@ -618,12 +639,12 @@ def CreateCheckout(request):
                 body=email_text,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 to=[traveller.email],
-                bcc = ["farabicse07@gmail.com"]
+                bcc=["farabicse07@gmail.com"]
             )
             
-            # email.attach('Booking_Invoice.pdf', invoice_file, 'application/pdf')
-
+            email.attach('Booking_Invoice.pdf', invoice_file, 'application/pdf')
             email.send()
+
             response_data = {
                 "payment_id": payment.id,
                 "payment_key": payment.payment_key,
@@ -643,41 +664,39 @@ def CreateCheckout(request):
         return Response({"error": str(e)}, status=500)
     except Exception as e:
         return Response({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
-
     
 from decimal import Decimal
 
-def calculate_discount(total_price, ref_no):
-    """Calculate discount based on ref_no from the Member model."""
+def calculate_discount(total_price, ref_no=None, coupon_discount=None):
+    """Calculate discount based on ref_no from the Member model or use provided coupon_discount."""
     discount_amount = Decimal(0)
     
-    if ref_no is None:
-        # No discount if ref_no is None
-        return discount_amount
-
-    # Find the member by ref_no (which is the agent's reference number)
-    member = Member.objects.filter(ref_no=ref_no).first()
-    
-    if member:
-        # Retrieve the discount information from the member
-        discount_type = member.discount_type
-        discount_value = member.discount_value
-        discount_percent = member.discount_percent
-        
-        # Ensure that the discount fields have valid values
-        if discount_type == "percentage" and discount_percent is not None:
-            # Calculate discount based on percentage
-            discount_amount = (total_price * discount_percent) / 100
-        elif discount_type == "value" and discount_value is not None:
-            # Use fixed discount value
-            discount_amount = discount_value
+    if coupon_discount is not None:
+        # Use the provided coupon discount amount
+        discount_amount = Decimal(coupon_discount)
+    elif ref_no:
+        # Find the member by ref_no (which is the agent's reference number)
+        member = Member.objects.filter(ref_no=ref_no).first()
+        if member:
+            # Retrieve the discount information from the member
+            discount_type = member.discount_type
+            discount_value = member.discount_value
+            discount_percent = member.discount_percent
+            
+            # Ensure that the discount fields have valid values
+            if discount_type == "percentage" and discount_percent is not None:
+                # Calculate discount based on percentage
+                discount_amount = (total_price * discount_percent) / 100
+            elif discount_type == "value" and discount_value is not None:
+                # Use fixed discount value
+                discount_amount = discount_value
+            else:
+                # Invalid discount type or missing values
+                print(f"Invalid discount type or missing value for ref_no {ref_no}.")
         else:
-            # Invalid discount type or missing values
-            print(f"Invalid discount type or missing value for ref_no {ref_no}.")
-    else:
-        print(f"No member found for ref_no {ref_no}.")
+            print(f"No member found for ref_no {ref_no}.")
     
-    return discount_amount
+    return discount_amount.quantize(Decimal('0.01'))
 
 
 

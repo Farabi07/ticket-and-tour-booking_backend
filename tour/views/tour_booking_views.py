@@ -401,7 +401,7 @@ def getAllBookedTourBooking(request):
     # Apply filters using TourBookingFilter
     tour_booking_queryset = TourBookingFilter(
         request.GET,
-        queryset=TourBooking.objects.all()
+        queryset=TourBooking.objects.filter(status="paid")
     ).qs
 
     # Dictionary to store aggregated results
@@ -418,9 +418,12 @@ def getAllBookedTourBooking(request):
         member_id = booking.agent.id if booking.agent else None
         member_name = booking.agent.first_name if booking.agent else "No Agent"
 
-        # **Group by (Tour ID & Discount Percent)**
+        # **Separate groups for is_agent = True and is_agent = False**
+        is_agent = booking.is_agent  # This ensures separate grouping
         discount_percent = booking.discount_percent or 0
-        group_key = (tour_id, discount_percent)  # Now considering discount percent
+
+        # Group key: (Tour ID, Discount Percent, Is Agent)
+        group_key = (tour_id, discount_percent, is_agent)
 
         if group_key not in aggregated_data:
             aggregated_data[group_key] = {
@@ -431,6 +434,7 @@ def getAllBookedTourBooking(request):
                 'discount_value': 0,
                 'booking_count': 0,
                 'members': [],
+                'is_agent': is_agent,  # Ensures separate grouping
             }
 
         # Update Aggregated Data
@@ -455,7 +459,3 @@ def getAllBookedTourBooking(request):
     }
 
     return Response(response, status=status.HTTP_200_OK)
-
-
-
-

@@ -18,7 +18,8 @@ urlpatterns = [
 
     path('api/v1/member/delete/<int:pk>', views.deleteMember),
 
-    path('api/v1/member/check_refer_id_when_create/',
-         views.checkReferIDWhenCreate),
+    path('api/v1/member/check_refer_id_when_create/',views.checkReferIDWhenCreate),
+
+    path('api/v1/member/apply_coupon/',views.applyCoupon),
 
 ]

@@ -56,13 +56,13 @@ class CurrencySerializer(serializers.ModelSerializer):
 
 
 class PaymentListSerializer(serializers.ModelSerializer):
-    agent_id = serializers.CharField(required=False, allow_null=True, write_only=True)  # Optional field
     created_by = AdminUserMinimalListSerializer()
     updated_by = AdminUserMinimalListSerializer()
     traveller = serializers.SerializerMethodField()
     tour = serializers.SerializerMethodField()
     currency = serializers.SerializerMethodField()
     currency = CurrencyListSerializer()
+    # tour_booking = TourBookingMinimalSerializer()
 
     class Meta:
         model = Payment
@@ -73,19 +73,14 @@ class PaymentListSerializer(serializers.ModelSerializer):
             'created_by': {'read_only': True},
             'updated_by': {'read_only': True},
         }
-
     def get_traveller(self, obj):
         return obj.traveller.first_name + " " + obj.traveller.last_name
-
     def get_tour(self, obj):
         return obj.tour.name
-
     def get_currency(self, obj):
         return obj.currency.currency_code
-
     def get_created_by(self, obj):
         return obj.created_by.email if obj.created_by else None
-
 
 class PaymentMinimalSerializer(serializers.ModelSerializer):
     class Meta:
@@ -94,8 +89,6 @@ class PaymentMinimalSerializer(serializers.ModelSerializer):
 
 
 class PaymentSerializer(serializers.ModelSerializer):
-    agent_id = serializers.CharField(required=False, allow_null=True)
-
     class Meta:
         model = Payment
         fields = '__all__'
@@ -105,10 +98,6 @@ class PaymentSerializer(serializers.ModelSerializer):
         user = get_current_authenticated_user()
         if user:
             model_object.created_by = user
-        # Check if agent_id is provided and set it
-        agent_id = validated_data.get('agent_id', None)
-        if agent_id:
-            model_object.agent_ref_no = agent_id  # Assuming agent_ref_no is being used as agent_id
         model_object.save()
         return model_object
 
@@ -117,10 +106,5 @@ class PaymentSerializer(serializers.ModelSerializer):
         user = get_current_authenticated_user()
         if user:
             model_object.updated_by = user
-        # Update agent_id if it's provided
-        agent_id = validated_data.get('agent_id', None)
-        if agent_id:
-            model_object.agent_ref_no = agent_id  # Again assuming this is the right field
         model_object.save()
         return model_object
-

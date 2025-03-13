@@ -10,6 +10,8 @@ from member.serializers import MemberListSerializer, MemberMinimalSerializer,Mem
 from tour.models import *
 from payments.models import Traveller
 
+	
+# Tour Content		
 class TourContentListSerializer(serializers.ModelSerializer):
     created_by = serializers.SerializerMethodField(read_only=True)
     updated_by = serializers.SerializerMethodField(read_only=True)
@@ -158,7 +160,6 @@ class TourBookingListSerializer(serializers.ModelSerializer):
             'updated_at': {'read_only': True},
             'created_by': {'read_only': True},
             'updated_by': {'read_only': True},
-			 'agent': {'allow_null': True, 'required': False},
         }
 
     def get_created_by(self, obj):
@@ -198,7 +199,6 @@ class TourBookingMinimalSerializer(serializers.ModelSerializer):
             'updated_at': {'read_only': True},
             'created_by': {'read_only': True},
             'updated_by': {'read_only': True},
-			'agent': {'allow_null': True, 'required': False},
         }
 
     def get_traveler(self, obj):
@@ -217,9 +217,6 @@ class TourBookingSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = TourBooking
 		fields = '__all__'
-		extra_kwargs = {
-            'agent': {'allow_null': True, 'required': False},  # ✅ Fix
-        }
 
 	def create(self, validated_data):
 		modelObject = super().create(validated_data=validated_data)

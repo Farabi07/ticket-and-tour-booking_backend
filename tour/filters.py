@@ -5,19 +5,7 @@ from tour.models import *
 import django_filters
 from .models import TourBooking
 
-# class BlogFilter(filters.FilterSet):
-#     title = filters.CharFilter(field_name="title", lookup_expr='icontains')
 
-#     class Meta:
-#         model = Blog
-#         fields = ['title', ]
-
-# class BlogCommentsFilter(filters.FilterSet):
-#     title = filters.CharFilter(field_name="title", lookup_expr='icontains')
-
-#     class Meta:
-#         model = BlogComments
-#         fields = ['title', ]
 
 class TourBookingFilter(django_filters.FilterSet):
 
@@ -26,10 +14,10 @@ class TourBookingFilter(django_filters.FilterSet):
     # Date filters for 'created_at'
     date_after = django_filters.DateFilter(field_name='created_at__date', lookup_expr='gte')
     date_before = django_filters.DateFilter(field_name='created_at__date', lookup_expr='lte')
-
+    is_agent = django_filters.BooleanFilter(field_name="is_agent", lookup_expr='exact', method='filter_is_agent')
     class Meta:
         model = TourBooking
-        fields = ['agent', 'tour','date_after', 'date_before']  # Ensure only valid model fields
+        fields = ['agent', 'tour','date_after', 'date_before','is_agent']  # Ensure only valid model fields
 
 
 # class BookingSummaryFilter(filters.FilterSet):

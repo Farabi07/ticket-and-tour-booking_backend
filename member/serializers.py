@@ -50,8 +50,7 @@ class MemberListSerializer(serializers.ModelSerializer):
 class MemberMinimalListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Member
-        fields = ['id', 'first_name', 'last_name', 'email', 'profession', 'primary_phone', 'father_name', 'mother_name',
-                  'username', 'image', 'street_address_one', 'street_address_two',]
+        fields = ['id', 'first_name', 'last_name', 'email','username','ref_no']
 
 
 class MemberSerializer(serializers.ModelSerializer):

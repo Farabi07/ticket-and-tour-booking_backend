@@ -14,9 +14,40 @@ import re
 from tour.utils import sync_cms_tour_content
 from django.db import transaction
 from member.models import Member
-# from payments.models import Traveller,Currency
 from django.contrib.postgres.fields import JSONField
+from django.db import models
+from django.utils import timezone
 
+
+# class Discount(models.Model):
+#     DISCOUNT_TYPE_CHOICES = [
+#         ('percentage', 'Percentage'),
+#         ('fixed', 'Fixed Value'),
+#     ]
+    
+#     code = models.CharField(max_length=20, unique=True, blank=True, null=True)
+#     discount_type = models.CharField(max_length=10, choices=DISCOUNT_TYPE_CHOICES, default='percentage',null=True, blank=True)
+#     value = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+#     valid_from = models.DateField(  null=True, blank=True)
+#     valid_to = models.DateField(null=True, blank=True)
+#     usage_count = models.IntegerField(default=0,null=True, blank=True)
+#     max_usage = models.IntegerField(default=100,null =True,blank=True)
+#     is_brand_ambassador = models.BooleanField(default=False,null=True, blank=True)
+#     is_active = models.BooleanField(default=True,null=True, blank=True)
+
+#     def is_valid(self):
+#         """Check if discount is still valid"""
+#         return self.valid_from <= timezone.now().date() <= self.valid_to and self.usage_count < self.max_usage
+    
+#     def apply_discount(self, price):
+#         """Apply discount to given price"""
+#         if self.discount_type == 'percentage':
+#             return price - (price * self.value / 100)
+#         return max(0, price - self.value)  # Ensure no negative price
+
+#     def __str__(self):
+#         return f"{self.code} - {self.discount_type} - {self.value}"
+    
 class TourContent(models.Model):
     # booking = models.ForeignKey("TourBooking", on_delete=models.CASCADE, related_name='tour_contents', null=True, blank=True)
     agent = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='tour_booking_agent', null=True, blank=True)
@@ -227,15 +258,19 @@ class TourBooking(models.Model):
     child_price = models.DecimalField(default=0, max_digits=20, decimal_places=2, null=True, blank=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total_cost = models.DecimalField(max_digits=10, decimal_places=2,blank=True,null=True)
+    coupon_applied_final_price = models.DecimalField(max_digits=10, decimal_places=2,blank=True,null=True)
+    coupon_discount = models.DecimalField(max_digits=10, decimal_places=2,blank=True,null=True)
     total_discount_amount = models.DecimalField(max_digits=10, decimal_places=2,blank=True,null=True)
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     discount_value = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     discount_type = models.CharField(max_length=20, choices=(('percentage', 'Percentage'), ('value', 'Value')), default='percentage',blank=True,null=True)
+    # discount_code = models.ForeignKey(Discount, on_delete=models.SET_NULL, null=True, blank=True)
+    is_cancelled = models.BooleanField(default=False,null=True, blank=True)
     participants = models.JSONField(null=True, blank=True)
     selected_date = models.DateField(null=True, blank=True)
     selected_time = models.TimeField(null=True, blank=True)
-    payWithCash = models.BooleanField(default=False, null=True, blank=True,db_default=False)
-    payWithStripe = models.BooleanField(default=False, null=True, blank=True,db_default=False)
+    payWithCash = models.BooleanField(default=False, null=True, blank=True)
+    payWithStripe = models.BooleanField(default=False, null=True, blank=True)
     duration = models.CharField(max_length=50,null=True, blank=True)
     is_agent = models.BooleanField(default=False, null=True, blank=True)
     status = models.CharField(
