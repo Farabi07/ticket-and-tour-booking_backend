@@ -209,6 +209,7 @@ def stripe_webhook(request):
 
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
+        print("srtripe session:", session)
         metadata = session.get('metadata', {})
         booking_id = metadata.get('booking_id')
         total_discount = float(metadata.get('total_discount', 0))
@@ -313,7 +314,6 @@ def stripe_webhook(request):
     return JsonResponse({'status': 'event received'}, status=200)
 
 
-
 @api_view(['POST'])
 def CreateCheckout(request):
     try:
@@ -388,7 +388,7 @@ def CreateCheckout(request):
         discounted_total_price = checkout_data.get('discountedtotalprice')
         if discounted_total_price:
             total_price = Decimal(str(discounted_total_price)).quantize(Decimal('0.01'))
-            print("coupont toal price", total_price)
+            print("coupon total price", total_price)
             
         
         # Update the tour's price
@@ -510,46 +510,18 @@ def CreateCheckout(request):
             success_url = f"{uk_url}/payment-success?payment_id={payment_key}"
 
         # Process Stripe payment if chosen
-        image_urls = []
+        image_urls = [checkout_data.get("tourImage")] if checkout_data.get("tourImage") else []
         if checkout_data.get('payWithStripe'):
             line_items = []
-            image_urls = [checkout_data.get("tourImage")] if checkout_data.get("tourImage") else []
             if image_urls:
+                unit_amount = int(total_price * 100)
                 line_items.append({
                     "price_data": {
                         "currency": currency_code,
                         "product_data": {"name": tour.name, "images": image_urls},
-                        "unit_amount": int(total_price * 100),
+                        "unit_amount": unit_amount,
                     },
                     "quantity": 1,
-                })
-            if adult_price > 0 and adult_count > 0:
-                line_items.append({
-                    "price_data": {
-                        "currency": currency_code,
-                        "product_data": {"name": f"Adult - {tour.name}"},
-                        "unit_amount": int(adult_price * 100),
-                    },
-                    "quantity": adult_count,
-                })
-            if youth_price > 0 and youth_count > 0:
-                line_items.append({
-                    "price_data": {
-                        "currency": currency_code,
-                        "product_data": {"name": f"Youth - {tour.name}"},
-                        "unit_amount": int(youth_price * 100),
-                    },
-                    "quantity": youth_count,
-                })
-
-            if child_price > 0 and child_count > 0:
-                line_items.append({
-                    "price_data": {
-                        "currency": currency_code,
-                        "product_data": {"name": f"Child - {tour.name}"},
-                        "unit_amount": int(child_price * 100),
-                    },
-                    "quantity": child_count,
                 })
 
             if not line_items:
