@@ -209,7 +209,7 @@ def stripe_webhook(request):
 
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
-        print("srtripe session:", session)
+        # print("srtripe session:", session)
         metadata = session.get('metadata', {})
         booking_id = metadata.get('booking_id')
         total_discount = float(metadata.get('total_discount', 0))
@@ -289,7 +289,7 @@ def stripe_webhook(request):
             bcc=["farabicse07@gmail.com"]
         )
         email.attach('Booking_Confirmation.pdf', pdf_invoice, 'application/pdf')
-        email.send()
+        # email.send()
 
         # Response Data
         response_data = {
@@ -503,7 +503,7 @@ def CreateCheckout(request):
         uk_url = "https://dreamtourism.co.uk"
         success_url = None
         if checkout_data.get('payWithStripe'):
-            success_url = f"{base_url}/booking-success?payment_id={payment_key}"
+            success_url = f"{base_url}/payment-success?payment_id={payment_key}"
         elif tour_booking.is_agent:  # If is_agent is True
             success_url = f"{base_url}/booking-success?payment_id={payment_key}"
         else:  # If is_agent is False
@@ -615,7 +615,7 @@ def CreateCheckout(request):
             )
             
             email.attach('Booking_Invoice.pdf', invoice_file, 'application/pdf')
-            email.send()
+            # email.send()
 
             response_data = {
                 "payment_id": payment.id,
